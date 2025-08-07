@@ -1,0 +1,21 @@
+# Node.js (Angular)
+node_modules/
+dist/
+.angular/cache/
+
+# Spring Boot (Java)
+target/
+*.log
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# MacOS
+.DS_Store
+
+# Docker volumes (optional)
+mysql_data/
+
+# Environment files (optional)
+.env
