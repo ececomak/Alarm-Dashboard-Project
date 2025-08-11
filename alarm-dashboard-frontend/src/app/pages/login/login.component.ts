@@ -1,41 +1,63 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { LoginService } from '../../services/login.service';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-login',
-  standalone: false,
+  standalone:false,
   templateUrl: './login.html',
-  styleUrl: './login.css'
+  styleUrls: ['./login.css']
 })
 export class LoginComponent {
-  email: string = '';
-  password: string = '';
-  loginError = false;
+  email = '';
+  password = '';
+  errorMessage = '';
 
-  constructor(
-    private router: Router,
-    private loginService: LoginService
-  ) {}
+  constructor(private http: HttpClient, private router: Router) {}
 
-  login() {
-      console.log('Login fonksiyonu tetiklendi');
-      console.log('Email:', this.email);
-      console.log('Password:', this.password);
-    this.loginService.login(this.email, this.password).subscribe({
-      next: (user) => {
-        if (user && user.role === 'admin') {
-          this.router.navigate(['/admin-dashboard']);
-        } else if (user && user.role === 'user') {
-          this.router.navigate(['/user-dashboard']);
-        } else {
-          this.loginError = true;
+  private decodeJwt(token: string): any {
+    try {
+      const payload = token.split('.')[1];
+      const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  }
+
+  onLogin() {
+    const body = { email: this.email, password: this.password };
+
+    this.http.post<any>('http://localhost:8080/api/auth/login', body)
+      .subscribe({
+        next: (res) => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('email');
+          localStorage.removeItem('role');
+
+          const token = String(res?.token || '');
+          const claims = this.decodeJwt(token);
+          const roleFromJwt = String(claims?.role || res?.role || '').toUpperCase();
+
+          localStorage.setItem('token', token);
+          localStorage.setItem('email', String(res?.email || claims?.sub || ''));
+          localStorage.setItem('role', roleFromJwt);
+
+          console.log('LOGIN RESPONSE:', res);
+          console.log('JWT CLAIMS:', claims);
+          console.log('ROLE USED:', roleFromJwt);
+
+          if (roleFromJwt === 'ADMIN') {
+            this.router.navigate(['/admin-dashboard']);
+          } else if (roleFromJwt === 'USER') {
+            this.router.navigate(['/user-dashboard']);
+          } else {
+            this.router.navigate(['/user-dashboard']);
+          }
+        },
+        error: (_) => {
+          this.errorMessage = 'Giriş başarısız! Email veya şifre yanlış.';
         }
-      },
-      error: (err) => {
-        console.error('Login error:', err);
-        this.loginError = true;
-      }
-    });
+      });
   }
 }

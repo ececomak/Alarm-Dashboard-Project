@@ -1,30 +1,23 @@
 package com.alarmdashboard.alarm_dashboard_backend.controller;
 
-import com.alarmdashboard.alarm_dashboard_backend.model.User;
+import com.alarmdashboard.alarm_dashboard_backend.dto.LoginRequest;
+import com.alarmdashboard.alarm_dashboard_backend.dto.LoginResponse;
 import com.alarmdashboard.alarm_dashboard_backend.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/users")
-@CrossOrigin(origins = "*") //Frontend bağlantısı
+@RequestMapping("/api/auth")
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
 
-    @PostMapping("/login")
-    public User login(@RequestBody User loginUser) {
-        String email = loginUser.getEmail();
-        String password = loginUser.getPassword();
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
 
-        User user = userService.login(email, password);
-
-        if (user != null) {
-            return user;
-        } else {
-            return null;
-        }
+    @PostMapping(value = "/login", consumes = "application/json", produces = "application/json")
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest req) {
+        return ResponseEntity.ok(userService.login(req));
     }
 }
-
