@@ -4,8 +4,8 @@ import { Component } from '@angular/core';
   selector: 'app-admin-dashboard',
   standalone: false,
   templateUrl: './admin-dashboard.html',
-  styleUrl: './admin-dashboard.css'
+  styleUrls: ['./admin-dashboard.css']
 })
 export class AdminDashboardComponent {
-
+  email = localStorage.getItem('email') || '';
 }

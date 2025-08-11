@@ -1,29 +1,43 @@
-import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { FormsModule } from '@angular/forms';
+import { HttpClientModule } from '@angular/common/http';
+
 import { AppRoutingModule } from './app-routing-module';
 import { App } from './app';
 import { LoginComponent } from './pages/login/login.component';
 import { AdminDashboardComponent } from './pages/admin-dashboard/admin-dashboard.component';
 import { UserDashboardComponent } from './pages/user-dashboard/user-dashboard.component';
-import { HttpClientModule } from '@angular/common/http';
+
+import {
+  NbThemeModule,
+  NbLayoutModule,
+  NbSidebarModule,
+  NbMenuModule,
+  NbIconModule,
+  NbCardModule,
+} from '@nebular/theme';
+import { NbEvaIconsModule } from '@nebular/eva-icons';
 
 @NgModule({
-  declarations: [
-    App,
-    LoginComponent,
-    AdminDashboardComponent,
-    UserDashboardComponent
-  ],
+  declarations: [App, LoginComponent, AdminDashboardComponent, UserDashboardComponent],
   imports: [
     BrowserModule,
-    AppRoutingModule,
+    BrowserAnimationsModule,
     FormsModule,
-    HttpClientModule
+    HttpClientModule,
+    AppRoutingModule,
+
+    NbThemeModule.forRoot({ name: 'default' }),
+    NbLayoutModule,
+    NbSidebarModule.forRoot(),
+    NbMenuModule.forRoot(),
+    NbIconModule,
+    NbEvaIconsModule,
+    NbCardModule,
   ],
-  providers: [
-    provideBrowserGlobalErrorListeners()
-  ],
-  bootstrap: [App]
+  providers: [],
+  bootstrap: [App],
 })
-export class AppModule { }
+export class AppModule {}

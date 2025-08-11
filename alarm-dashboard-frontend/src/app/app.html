@@ -1,1 +1,30 @@
-<router-outlet></router-outlet>
+<!-- login sayfasında shell görünmesin -->
+<div *ngIf="showShell; else authOnly">
+  <nb-layout>
+    <nb-layout-header fixed>
+      <div class="header-wrap">
+        <div class="brand">
+          <nb-icon icon="activity-outline"></nb-icon>
+          <span class="app-title">Alarm Dashboard</span>
+        </div>
+        <div class="spacer"></div>
+        <div class="user-info">
+          <nb-icon icon="person-outline"></nb-icon>
+          <span>{{ email }}</span>
+        </div>
+      </div>
+    </nb-layout-header>
+
+    <nb-sidebar tag="menu-sidebar" state="expanded">
+      <nb-menu [items]="menuItems"></nb-menu>
+    </nb-sidebar>
+
+    <nb-layout-column>
+      <router-outlet></router-outlet>
+    </nb-layout-column>
+  </nb-layout>
+</div>
+
+<ng-template #authOnly>
+  <router-outlet></router-outlet>
+</ng-template>

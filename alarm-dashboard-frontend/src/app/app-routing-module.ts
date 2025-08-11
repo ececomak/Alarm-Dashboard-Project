@@ -5,10 +5,11 @@ import { AdminDashboardComponent } from './pages/admin-dashboard/admin-dashboard
 import { UserDashboardComponent } from './pages/user-dashboard/user-dashboard.component';
 
 const routes: Routes = [
-  { path: '', component: LoginComponent },
+  { path: 'login', component: LoginComponent },
   { path: 'admin-dashboard', component: AdminDashboardComponent },
-  { path: 'user-dashboard', component: UserDashboardComponent }
-  
+  { path: 'user-dashboard', component: UserDashboardComponent },
+  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  { path: '**', redirectTo: 'login' },
 ];
 
 @NgModule({
