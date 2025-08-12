@@ -1,0 +1,34 @@
+<div class="grid">
+  <nb-card *ngFor="let k of kpis" class="kpi">
+    <nb-card-body>
+      <div class="kpi-wrap">
+        <nb-icon [icon]="k.icon" [status]="k.status"></nb-icon>
+        <div class="kpi-meta">
+          <div class="kpi-title">{{ k.title }}</div>
+          <div class="kpi-value">{{ k.value }}</div>
+        </div>
+      </div>
+    </nb-card-body>
+  </nb-card>
+
+  <nb-card class="span-2">
+    <nb-card-header>Two Columns</nb-card-header>
+    <nb-card-body>
+      <div class="cols cols-2">
+        <div class="box"><b>Left</b><br/>Responsive content area.</div>
+        <div class="box"><b>Right</b><br/>Use for details or logs.</div>
+      </div>
+    </nb-card-body>
+  </nb-card>
+
+  <nb-card class="span-2">
+    <nb-card-header>Three Columns</nb-card-header>
+    <nb-card-body>
+      <div class="cols cols-3">
+        <div class="box">Column A</div>
+        <div class="box">Column B</div>
+        <div class="box">Column C</div>
+      </div>
+    </nb-card-body>
+  </nb-card>
+</div>

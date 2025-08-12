@@ -1,0 +1,67 @@
+<nb-card>
+  <nb-card-header>
+    <div class="toolbar">
+      <div class="title">
+        <nb-icon icon="grid-outline"></nb-icon>
+        Simple Table
+      </div>
+
+      <div class="spacer"></div>
+
+      <input nbInput fullWidth placeholder="Search…" [(ngModel)]="q" class="search" />
+      <nb-select size="small" [(selected)]="pageSize">
+        <nb-option [value]="5">5</nb-option>
+        <nb-option [value]="10">10</nb-option>
+        <nb-option [value]="20">20</nb-option>
+      </nb-select>
+    </div>
+  </nb-card-header>
+
+  <nb-card-body>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th (click)="setSort('id')"># <nb-icon icon="chevron-down-outline"></nb-icon></th>
+            <th (click)="setSort('device')">Device <nb-icon icon="chevron-down-outline"></nb-icon></th>
+            <th (click)="setSort('severity')">Severity <nb-icon icon="chevron-down-outline"></nb-icon></th>
+            <th>Message</th>
+            <th (click)="setSort('time')">Time <nb-icon icon="chevron-down-outline"></nb-icon></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of paged">
+            <td>{{ r.id }}</td>
+            <td>{{ r.device }}</td>
+            <td>
+              <span class="badge" [ngClass]="r.severity.toLowerCase()">{{ r.severity }}</span>
+            </td>
+            <td>{{ r.message }}</td>
+            <td>{{ r.time }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+<div class="pager">
+  <button nbButton size="small"
+          (click)="page = max(1, page - 1)"
+          [disabled]="page === 1">
+    Prev
+  </button>
+
+  <ng-container *ngFor="let p of pages()">
+    <button nbButton size="small"
+            (click)="page = p"
+            [status]="p === page ? 'primary' : 'basic'">
+      {{ p }}
+    </button>
+  </ng-container>
+
+  <button nbButton size="small"
+          (click)="page = min(pages().length, page + 1)"
+          [disabled]="page === pages().length">
+    Next
+  </button>
+</div>
+  </nb-card-body>
+</nb-card>

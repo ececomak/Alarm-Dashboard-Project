@@ -1,0 +1,47 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.title {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-weight: 600;
+}
+.spacer { flex: 1; }
+.search { width: 220px; }
+
+.table-wrap { overflow-x: auto; }
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.table th, .table td {
+  padding: .6rem .75rem;
+  border-bottom: 1px solid rgba(0,0,0,.06);
+  white-space: nowrap;
+}
+.table thead th {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pager {
+  display: flex;
+  gap: .5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: .15rem .5rem;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.badge.critical { background: rgba(255,0,0,.12); color: #b00020; }
+.badge.warning  { background: rgba(255,167,38,.18); color: #8a4b00; }
+.badge.info     { background: rgba(0,150,255,.13); color: #0b5cab; }

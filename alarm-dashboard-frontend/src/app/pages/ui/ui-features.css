@@ -1,0 +1,15 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 1rem;
+}
+.span-2 { grid-column: span 2; }
+
+.alerts nb-alert { margin-bottom: .5rem; }
+.row { display:flex; align-items:center; gap: .75rem; }
+.tips { display:flex; gap: .5rem; flex-wrap: wrap; }
+
+@media (max-width: 992px) {
+  .grid { grid-template-columns: 1fr; }
+  .span-2 { grid-column: span 1; }
+}

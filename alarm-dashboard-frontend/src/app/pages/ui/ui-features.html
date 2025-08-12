@@ -1,0 +1,85 @@
+<div class="grid">
+  <nb-card>
+    <nb-card-header>Tabs</nb-card-header>
+    <nb-card-body>
+      <nb-tabset fullWidth>
+        <nb-tab tabTitle="Overview">
+          <p nbTooltip="General summary">High level overview content.</p>
+        </nb-tab>
+        <nb-tab tabTitle="Details">
+          <p>Detailed stats and breakdowns go here.</p>
+        </nb-tab>
+        <nb-tab tabTitle="Settings">
+          <p>Configuration and preferences.</p>
+        </nb-tab>
+      </nb-tabset>
+    </nb-card-body>
+  </nb-card>
+
+  <nb-card>
+    <nb-card-header>Accordion</nb-card-header>
+    <nb-card-body>
+      <nb-accordion multi>
+        <nb-accordion-item>
+          <nb-accordion-item-header>What is monitored?</nb-accordion-item-header>
+          <nb-accordion-item-body>Devices, sensors, gateways and services.</nb-accordion-item-body>
+        </nb-accordion-item>
+        <nb-accordion-item>
+          <nb-accordion-item-header>Alert Rules</nb-accordion-item-header>
+          <nb-accordion-item-body>Thresholds and correlations define alarm levels.</nb-accordion-item-body>
+        </nb-accordion-item>
+      </nb-accordion>
+    </nb-card-body>
+  </nb-card>
+
+  <nb-card class="span-2">
+    <nb-card-header>Alerts</nb-card-header>
+    <nb-card-body class="alerts">
+      <nb-alert *ngFor="let a of alerts" [status]="a.status">
+        {{ a.text }}
+      </nb-alert>
+    </nb-card-body>
+  </nb-card>
+
+  <nb-card>
+    <nb-card-header>Processing</nb-card-header>
+    <nb-card-body>
+      <div class="row" style="gap:.75rem; align-items:center; margin-bottom:.5rem;">
+        <span>Alarm ingestion</span>
+        <nb-progress-bar [value]="progress" [status]="progressStatus"></nb-progress-bar>
+        <span>{{ progress }}%</span>
+      </div>
+      <small *ngIf="progress < 100">Streaming alarms are being processed…</small>
+      <small *ngIf="progress === 100">All queued alarms processed.</small>
+    </nb-card-body>
+  </nb-card>
+
+  <nb-card>
+    <nb-card-header>Tooltips (Alarm Severity)</nb-card-header>
+    <nb-card-body class="tips">
+      <button nbButton status="danger"
+              nbTooltip="Immediate action required (Critical)"
+              nbTooltipPlacement="top">
+        <nb-icon icon="alert-triangle-outline"></nb-icon>&nbsp;Critical
+      </button>
+
+      <button nbButton status="warning"
+              nbTooltip="Needs attention soon (Warning)"
+              nbTooltipPlacement="top">
+        <nb-icon icon="flash-outline"></nb-icon>&nbsp;Warning
+      </button>
+
+      <button nbButton status="info"
+              nbTooltip="Informational / FYI (Info)"
+              nbTooltipPlacement="top">
+        <nb-icon icon="bell-outline"></nb-icon>&nbsp;Info
+      </button>
+
+      <button nbButton status="primary"
+              nbTooltip="Normal operation"
+              nbTooltipPlacement="top">
+        <nb-icon icon="activity-outline"></nb-icon>&nbsp;Normal
+      </button>
+    </nb-card-body>
+  </nb-card>
+</div>

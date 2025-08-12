@@ -1,0 +1,22 @@
+.grid {
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 1rem;
+}
+.span-2 { grid-column: span 2; }
+
+.kpi .kpi-wrap { display:flex; align-items:center; gap: .75rem; }
+.kpi nb-icon { font-size: 22px; width:22px; height:22px; }
+.kpi .kpi-title { opacity: .75; font-size: .85rem; }
+.kpi .kpi-value { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+
+.cols { display:grid; gap: .75rem; }
+.cols-2 { grid-template-columns: 1fr 1fr; }
+.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.box { padding: .75rem; border: 1px dashed var(--border-basic-color-3); border-radius: .5rem; }
+
+@media (max-width: 992px) {
+  .grid { grid-template-columns: 1fr; }
+  .span-2 { grid-column: span 1; }
+  .cols-2, .cols-3 { grid-template-columns: 1fr; }
+}

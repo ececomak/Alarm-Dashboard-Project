@@ -1,0 +1,26 @@
+<nb-card>
+  <nb-card-header>
+    <div class="title">
+      <nb-icon icon="file-text-outline"></nb-icon>
+      Maintenance Notes
+    </div>
+  </nb-card-header>
+
+  <nb-card-body>
+    <div class="toolbar">
+      <button nbButton size="small" status="basic" (click)="note = note + (note ? '\n' : '') + '• '">Bullet</button>
+      <button nbButton size="small" status="basic" (click)="note = note.trim()">Trim</button>
+      <div class="spacer"></div>
+      <button nbButton size="small" status="success" (click)="save()">Save</button>
+      <button nbButton size="small" status="danger" (click)="clear()">Clear</button>
+    </div>
+
+    <textarea nbInput rows="12" placeholder="Write maintenance notes…"
+              [(ngModel)]="note"></textarea>
+
+    <div class="meta">
+      <span>Characters: {{ note.length }}</span>
+      <span *ngIf="savedAt">Last saved: {{ savedAt }}</span>
+    </div>
+  </nb-card-body>
+</nb-card>

@@ -23,3 +23,5 @@ svg {
   height: auto !important;
   max-width: 100%;
 }
+
+@import "~leaflet/dist/leaflet.css";

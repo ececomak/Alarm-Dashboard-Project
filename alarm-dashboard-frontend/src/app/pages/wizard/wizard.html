@@ -1,0 +1,88 @@
+<nb-card>
+  <nb-card-header>
+    <div class="title">
+      <nb-icon icon="settings-2-outline"></nb-icon>
+      Maintenance Wizard
+    </div>
+  </nb-card-header>
+
+  <nb-card-body>
+    <nb-stepper orientation="horizontal">
+
+      <nb-step label="Device">
+        <form [formGroup]="deviceForm" class="form">
+          <div class="field">
+            <label>Device</label>
+            <input nbInput placeholder="e.g. Pump-4" formControlName="device" />
+            <small class="err" *ngIf="d.device.touched && (d.device.errors?.['required'] || d.device.errors?.['maxlength'])">
+              Device is required (max 40 chars).
+            </small>
+          </div>
+          <div class="field">
+            <label>Severity</label>
+            <nb-select formControlName="severity">
+              <nb-option value="Critical">Critical</nb-option>
+              <nb-option value="Warning">Warning</nb-option>
+              <nb-option value="Info">Info</nb-option>
+            </nb-select>
+          </div>
+          <button nbButton status="primary" nbStepperNext [disabled]="deviceForm.invalid">Next</button>
+        </form>
+      </nb-step>
+
+      <nb-step label="Details">
+        <form [formGroup]="detailForm" class="form">
+          <div class="field">
+            <label>Title</label>
+            <input nbInput placeholder="Short summary" formControlName="title" />
+            <small class="err" *ngIf="t.title.touched && (t.title.errors?.['required'] || t.title.errors?.['maxlength'])">
+              Title is required (max 60 chars).
+            </small>
+          </div>
+          <div class="field">
+            <label>Description</label>
+            <textarea nbInput rows="5" placeholder="Describe the maintenance task…" formControlName="description"></textarea>
+            <small class="err" *ngIf="t.description.touched && (t.description.errors?.['required'] || t.description.errors?.['maxlength'])">
+              Description is required (max 500 chars).
+            </small>
+          </div>
+          <div class="actions">
+            <button nbButton nbStepperPrevious status="basic">Back</button>
+            <button nbButton status="primary" nbStepperNext [disabled]="detailForm.invalid">Next</button>
+          </div>
+        </form>
+      </nb-step>
+
+      <nb-step label="Confirm">
+        <form [formGroup]="confirmForm" class="form">
+          <div class="field">
+            <label>Assignee</label>
+            <nb-select formControlName="assignee">
+              <nb-option value="Ops Team">Ops Team</nb-option>
+              <nb-option value="Field Team">Field Team</nb-option>
+              <nb-option value="NOC">NOC</nb-option>
+            </nb-select>
+          </div>
+          <div class="summary">
+            <div><b>Device:</b> {{ deviceForm.value.device }} ({{ deviceForm.value.severity }})</div>
+            <div><b>Title:</b> {{ detailForm.value.title }}</div>
+            <div><b>Description:</b> {{ detailForm.value.description }}</div>
+            <div><b>Assignee:</b> {{ confirmForm.value.assignee }}</div>
+          </div>
+          <div class="actions">
+            <button nbButton nbStepperPrevious status="basic">Back</button>
+            <button nbButton status="success" (click)="finish()">Create Ticket</button>
+          </div>
+        </form>
+      </nb-step>
+    </nb-stepper>
+  </nb-card-body>
+</nb-card>
+
+<nb-card *ngIf="submitted">
+  <nb-card-header>Result</nb-card-header>
+  <nb-card-body>
+    <pre *ngIf="result">{{ result | json }}</pre>
+    <span *ngIf="!result" class="err">Form is incomplete. Please check steps.</span>
+  </nb-card-body>
+</nb-card>

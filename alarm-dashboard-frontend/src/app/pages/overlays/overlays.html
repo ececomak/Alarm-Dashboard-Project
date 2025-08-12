@@ -1,0 +1,39 @@
+<nb-card>
+  <nb-card-header>
+    <div class="title">
+      <nb-icon icon="options-2-outline"></nb-icon>
+      Dialogs & Toastr
+    </div>
+  </nb-card-header>
+
+  <nb-card-body>
+    <div class="grid">
+      <nb-card>
+        <nb-card-header>Dialog</nb-card-header>
+        <nb-card-body>
+          <button nbButton status="primary" (click)="openConfirm()">Open Confirm Dialog</button>
+        </nb-card-body>
+      </nb-card>
+
+      <nb-card>
+        <nb-card-header>Toastr</nb-card-header>
+        <nb-card-body class="toastr-actions">
+          <button nbButton status="success" (click)="showSuccess()">Success</button>
+          <button nbButton status="warning" (click)="showWarning()">Warning</button>
+          <button nbButton status="danger"  (click)="showError()">Error</button>
+        </nb-card-body>
+      </nb-card>
+    </div>
+  </nb-card-body>
+</nb-card>
+
+<ng-template #confirmTpl let-ref="dialogRef">
+  <nb-card>
+    <nb-card-header>Confirm Action</nb-card-header>
+    <nb-card-body>Are you sure you want to proceed?</nb-card-body>
+    <nb-card-footer class="footer">
+      <button nbButton status="basic" type="button" (click)="ref.close(false)">Cancel</button>
+      <button nbButton status="primary" type="button" (click)="ref.close(true)">Confirm</button>
+    </nb-card-footer>
+  </nb-card>
+</ng-template>

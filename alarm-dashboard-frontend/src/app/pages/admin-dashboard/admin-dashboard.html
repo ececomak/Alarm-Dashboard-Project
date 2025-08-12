@@ -1,17 +1,56 @@
 <h2>Welcome, {{ email }}</h2>
 
-<div class="grid">
+<div class="grid kpis">
   <nb-card *ngFor="let s of stats" class="stat">
-    <nb-card-header>
-      <nb-icon [icon]="s.icon"></nb-icon> {{ s.title }}
-    </nb-card-header>
+    <nb-card-header><nb-icon [icon]="s.icon"></nb-icon> {{ s.title }}</nb-card-header>
     <nb-card-body><h2>{{ s.value }}</h2></nb-card-body>
   </nb-card>
+</div>
 
-  <nb-card class="span-2">
-    <nb-card-header>Weekly Alarms</nb-card-header>
+<nb-card>
+  <nb-card-header>Weekly Alarms</nb-card-header>
+  <nb-card-body>
+    <div #trendEl class="echart"></div>
+  </nb-card-body>
+</nb-card>
+
+<div class="grid charts-2">
+  <nb-card>
+    <nb-card-header>Severity Distribution</nb-card-header>
     <nb-card-body>
-      <div #chartEl class="echart"></div>
+      <div #pieEl class="echart"></div>
+    </nb-card-body>
+  </nb-card>
+
+  <nb-card>
+    <nb-card-header>Hourly Activity</nb-card-header>
+    <nb-card-body>
+      <div #barEl class="echart"></div>
+    </nb-card-body>
+  </nb-card>
+</div>
+
+<div class="grid charts-2">
+  <nb-card>
+    <nb-card-header>System Uptime</nb-card-header>
+    <nb-card-body>
+      <div #gaugeEl class="echart small"></div>
+    </nb-card-body>
+  </nb-card>
+
+  <nb-card>
+    <nb-card-header>Recent Events</nb-card-header>
+    <nb-card-body>
+      <table class="table">
+        <thead>
+          <tr><th>Time</th><th>Source</th><th>Message</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>09:12</td><td>Tunnel-2</td><td>Warning acknowledged</td></tr>
+          <tr><td>08:45</td><td>Tunnel-4</td><td>Info received</td></tr>
+          <tr><td>Yesterday</td><td>Tunnel-1</td><td>Critical resolved</td></tr>
+        </tbody>
+      </table>
     </nb-card-body>
   </nb-card>
 </div>
