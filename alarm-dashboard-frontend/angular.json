@@ -35,9 +35,12 @@
               "src/assets"
             ],
             "styles": [
-              "src/styles.css",
               "node_modules/@nebular/theme/styles/prebuilt/default.css",
-              "node_modules/eva-icons/style/eva-icons.css"
+              "node_modules/@nebular/theme/styles/prebuilt/dark.css",
+              "node_modules/@nebular/theme/styles/prebuilt/cosmic.css",
+              "node_modules/@nebular/theme/styles/prebuilt/corporate.css",
+              "node_modules/eva-icons/style/eva-icons.css",
+              "src/styles.css"
             ],
             "scripts": []
           },
@@ -93,9 +96,12 @@
               "src/assets"
             ],
             "styles": [
-              "src/styles.css",
               "node_modules/@nebular/theme/styles/prebuilt/default.css",
-              "node_modules/eva-icons/style/eva-icons.css"
+              "node_modules/@nebular/theme/styles/prebuilt/dark.css",
+              "node_modules/@nebular/theme/styles/prebuilt/cosmic.css",
+              "node_modules/@nebular/theme/styles/prebuilt/corporate.css",
+              "node_modules/eva-icons/style/eva-icons.css",
+              "src/styles.css"
             ],
             "scripts": []
           }

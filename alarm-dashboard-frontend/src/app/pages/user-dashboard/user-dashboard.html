@@ -1,6 +1,28 @@
 <nb-card>
   <nb-card-header>User Dashboard</nb-card-header>
   <nb-card-body>
-    <p>Hello, {{ email }}</p>
+    <h3>Hello, {{ email }}</h3>
+    <p class="muted">Here’s a quick view of your alarms and recent activity.</p>
   </nb-card-body>
 </nb-card>
+
+<div class="grid">
+  <nb-card *ngFor="let s of summary" class="stat">
+    <nb-card-header>
+      <nb-icon [icon]="s.icon"></nb-icon> {{ s.label }}
+    </nb-card-header>
+    <nb-card-body><h2>{{ s.value }}</h2></nb-card-body>
+  </nb-card>
+  
+  <nb-card class="span-2">
+    <nb-card-header>Recent Activity</nb-card-header>
+    <nb-card-body>
+      <ul class="recent">
+        <li *ngFor="let r of recent">
+          <span class="time">{{ r.time }}</span>
+          <span class="text">{{ r.text }}</span>
+        </li>
+      </ul>
+    </nb-card-body>
+  </nb-card>
+</div>

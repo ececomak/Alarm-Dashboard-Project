@@ -1,17 +1,31 @@
-<!-- login sayfasında shell görünmesin -->
 <div *ngIf="showShell; else authOnly">
   <nb-layout>
+
     <nb-layout-header fixed>
-      <div class="header-wrap">
+      <div class="header">
+        <button nbButton ghost class="menu-btn" (click)="toggleSidebar()">
+          <nb-icon icon="menu-2-outline"></nb-icon>
+        </button>
+
         <div class="brand">
           <nb-icon icon="activity-outline"></nb-icon>
           <span class="app-title">Alarm Dashboard</span>
         </div>
+
+        <nb-select [(selected)]="currentTheme" (selectedChange)="changeTheme($event)" size="small" class="theme-select">
+          <nb-option value="default">Light</nb-option>
+          <nb-option value="dark">Dark</nb-option>
+          <nb-option value="cosmic">Cosmic</nb-option>
+          <nb-option value="corporate">Corporate</nb-option>
+        </nb-select>
+
         <div class="spacer"></div>
-        <div class="user-info">
-          <nb-icon icon="person-outline"></nb-icon>
-          <span>{{ email }}</span>
-        </div>
+
+        <nb-actions size="small" class="actions">
+          <nb-action class="user-action">
+            <nb-user size="small" [name]="email" [onlyPicture]="false"></nb-user>
+          </nb-action>
+        </nb-actions>
       </div>
     </nb-layout-header>
 
@@ -22,6 +36,7 @@
     <nb-layout-column>
       <router-outlet></router-outlet>
     </nb-layout-column>
+
   </nb-layout>
 </div>
 

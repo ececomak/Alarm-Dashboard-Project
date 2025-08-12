@@ -1,0 +1,39 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.stat h2 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.span-2 { grid-column: span 2; }
+
+.recent {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.recent li {
+  display: flex;
+  align-items: center;
+  padding: .5rem 0;
+  border-bottom: 1px solid rgba(0,0,0,.06);
+}
+.recent li:last-child { border-bottom: 0; }
+.recent .time {
+  width: 90px;
+  font-weight: 600;
+  opacity: .7;
+}
+.recent .text { flex: 1; }
+
+.muted { opacity: .75; }
+@media (max-width: 992px) {
+  .grid { grid-template-columns: 1fr; }
+  .span-2 { grid-column: span 1; }
+}

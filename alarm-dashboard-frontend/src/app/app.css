@@ -1,5 +1,32 @@
-.header-wrap { display:flex; align-items:center; gap:12px; }
-.brand { display:flex; align-items:center; gap:8px; font-weight:600; }
-.app-title { font-size:16px; }
-.spacer { flex:1; }
-.user-info { display:flex; align-items:center; gap:6px; }
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px;
+  width: 100%;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.app-title { font-size: 16px; }
+
+.spacer { flex: 1; }
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-action { margin-left: 24px; }
+
+.menu-btn { margin-right: .5rem; }
+nb-layout-column { padding: 1rem; }
+nb-card-header nb-icon { margin-right: .5rem; }
+nb-icon, nb-icon svg { width: 1.25rem; height: 1.25rem; line-height: 1; }
