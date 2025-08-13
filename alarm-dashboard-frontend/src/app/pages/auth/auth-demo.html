@@ -1,0 +1,40 @@
+<nb-card>
+  <nb-card-header>
+    <div class="title">
+      <nb-icon icon="lock-outline"></nb-icon>
+      Auth Demo
+    </div>
+  </nb-card-header>
+
+  <nb-card-body>
+    <div class="grid">
+      <nb-card>
+        <nb-card-header>Status</nb-card-header>
+        <nb-card-body>
+          <div class="row"><b>Logged in:</b> {{ isLoggedIn ? 'Yes' : 'No' }}</div>
+          <div class="row"><b>Email:</b> {{ email || '—' }}</div>
+          <div class="row"><b>Role:</b>  {{ role  || '—' }}</div>
+          <div class="actions">
+            <button nbButton status="primary" (click)="goUser()">Go to User Dashboard</button>
+            <button nbButton status="info" *ngIf="role === 'ADMIN'" (click)="goAdmin()">Go to Admin Dashboard</button>
+            <button nbButton status="danger" (click)="logout()">Logout</button>
+          </div>
+        </nb-card-body>
+      </nb-card>
+
+      <nb-card>
+        <nb-card-header>Role-based UI</nb-card-header>
+        <nb-card-body>
+          <nb-alert status="info" *ngIf="role !== 'ADMIN'">
+            This block is visible to regular users.
+          </nb-alert>
+          <nb-alert status="success" *ngIf="role === 'ADMIN'">
+            Admin-only section: you have full access.
+          </nb-alert>
+          <small nbTooltip="In real app, we also add router guards." nbTooltipPlacement="top">
+          </small>
+        </nb-card-body>
+      </nb-card>
+    </div>
+  </nb-card-body>
+</nb-card>

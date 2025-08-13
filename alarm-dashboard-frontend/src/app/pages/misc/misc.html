@@ -1,0 +1,51 @@
+<div class="grid">
+  <nb-card>
+    <nb-card-header>Alerts</nb-card-header>
+    <nb-card-body class="stack">
+      <nb-alert status="info">System maintenance tonight.</nb-alert>
+      <nb-alert status="warning">Network latency increased.</nb-alert>
+      <nb-alert status="danger">Critical threshold reached.</nb-alert>
+    </nb-card-body>
+  </nb-card>
+
+  <nb-card>
+    <nb-card-header>Badges & Tips</nb-card-header>
+    <nb-card-body class="stack">
+      <div class="badges">
+        <span class="badge critical" nbTooltip="Requires immediate action">Critical</span>
+        <span class="badge warning"  nbTooltip="Needs attention">Warning</span>
+        <span class="badge info"     nbTooltip="Informational">Info</span>
+        <span class="badge ok"       nbTooltip="All good">OK</span>
+      </div>
+      <small>Hover badges to see tooltips.</small>
+    </nb-card-body>
+  </nb-card>
+
+  <nb-card>
+    <nb-card-header>Progress</nb-card-header>
+    <nb-card-body>
+      <div class="row">
+        <span>Processing</span>
+        <nb-progress-bar [value]="percent" [status]="percent<70 ? 'primary' : (percent<100 ? 'warning' : 'success')"></nb-progress-bar>
+        <span>{{ percent }}%</span>
+      </div>
+      <button nbButton status="primary" (click)="simulate()" [disabled]="loading">
+        {{ loading ? 'Running…' : 'Simulate' }}
+      </button>
+    </nb-card-body>
+  </nb-card>
+
+  <nb-card>
+    <nb-card-header>Toggles</nb-card-header>
+    <nb-card-body class="toggles">
+      <label class="line">
+        <nb-toggle></nb-toggle>
+        <span>Live updates</span>
+      </label>
+      <label class="line">
+        <nb-toggle checked></nb-toggle>
+        <span>Notifications</span>
+      </label>
+    </nb-card-body>
+  </nb-card>
+</div>

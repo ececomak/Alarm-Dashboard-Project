@@ -1,0 +1,17 @@
+.page-title { display:flex; align-items:center; gap:.5rem; margin-bottom:.5rem; }
+.grid { display:grid; gap:1rem; }
+.kpis { grid-template-columns: repeat(4, minmax(0,1fr)); }
+.charts-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+
+.kpi .kpi-row { display:flex; align-items:center; gap:.75rem; }
+.kpi nb-icon { width:22px; height:22px; font-size:22px; }
+.kpi .kpi-title { opacity:.75; font-size:.85rem; }
+.kpi .kpi-value { font-size:1.6rem; font-weight:700; line-height:1.1; }
+
+.echart { width:100%; height:300px; }
+.table-wrap { overflow:auto; }
+.table { width:100%; border-collapse: collapse; }
+.table th, .table td { padding:.5rem; border-bottom: 1px solid var(--border-basic-color-3); }
+
+@media (max-width: 1200px){ .kpis{ grid-template-columns: repeat(2,1fr);} }
+@media (max-width: 768px){ .charts-2{ grid-template-columns: 1fr; } }

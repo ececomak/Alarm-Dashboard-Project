@@ -19,6 +19,11 @@ import { WizardComponent } from './pages/wizard/wizard.component';
 import { LayoutDemoComponent } from './pages/layout/layout-demo.component';
 import { EditorsComponent } from './pages/editors/editors.component';
 import { MapsComponent } from './pages/maps/maps.component';
+import { AuthDemoComponent } from './pages/auth/auth-demo.component';
+import { MiscComponent } from './pages/misc/misc.component';
+import { HasRoleDirective } from './directives/has-role.directive';
+import { EcommerceComponent } from './pages/ecommerce/ecommerce.component';
+import { IotComponent } from './pages/iot/iot.component';
 
 import {
   NbThemeModule,
@@ -61,6 +66,11 @@ import { NbEvaIconsModule } from '@nebular/eva-icons';
     LayoutDemoComponent,
     EditorsComponent,
     MapsComponent,
+    AuthDemoComponent,
+    MiscComponent,
+    HasRoleDirective, 
+    EcommerceComponent,
+    IotComponent,
   ],
   imports: [
     BrowserModule,

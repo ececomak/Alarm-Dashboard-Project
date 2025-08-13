@@ -1,0 +1,35 @@
+<h2 class="page-title">
+  <nb-icon icon="home-outline"></nb-icon>
+  IoT Dashboard
+</h2>
+
+<div class="grid kpis">
+  <nb-card class="kpi">
+    <nb-card-header>System Uptime</nb-card-header>
+    <nb-card-body><div #gaugeEl class="echart gauge"></div></nb-card-body>
+  </nb-card>
+
+  <nb-card class="kpi">
+    <nb-card-header>Sensor Trend</nb-card-header>
+    <nb-card-body><div #trendEl class="echart"></div></nb-card-body>
+  </nb-card>
+</div>
+
+<nb-card>
+  <nb-card-header>Devices</nb-card-header>
+  <nb-card-body>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Name</th><th>Status</th><th>Temp (°C)</th><th>Humidity (%)</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let d of devices">
+            <td>{{ d.name }}</td>
+            <td><span class="badge" [ngClass]="statusClass(d.status)">{{ d.status }}</span></td>
+            <td>{{ d.temp }}</td>
+            <td>{{ d.humidity }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </nb-card-body>
+</nb-card>

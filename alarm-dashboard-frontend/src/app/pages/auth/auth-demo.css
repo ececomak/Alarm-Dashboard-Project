@@ -1,0 +1,5 @@
+.title { display:flex; align-items:center; gap:.5rem; font-weight:600; }
+.grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:1rem; }
+.row { display:flex; gap:.5rem; align-items:center; margin:.25rem 0; }
+.actions { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.5rem; }
+@media (max-width: 992px){ .grid{ grid-template-columns:1fr; } }

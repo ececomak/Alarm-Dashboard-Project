@@ -13,13 +13,13 @@ export class App {
   showShell = false;
   email = '';
   role = '';
-  menuItems: any[] = [];
   currentTheme = localStorage.getItem('theme') || 'default';
+  menuItems: any[] = [];
 
   constructor(
     private router: Router,
     private theme: NbThemeService,
-    private sidebar: NbSidebarService
+    private sidebar: NbSidebarService,
   ) {
     this.theme.changeTheme(this.currentTheme);
 
@@ -46,44 +46,74 @@ export class App {
     this.sidebar.toggle(true, 'menu-sidebar');
   }
 
+
   private buildMenu(role: string): any[] {
+    const isAdmin = role === 'ADMIN';
+
     const base: any[] = [
-      { title: 'Admin Dashboard', icon: 'grid-outline', link: '/admin-dashboard', hidden: role !== 'ADMIN' },
-      { title: 'User Dashboard',  icon: 'person-outline', link: '/user-dashboard',  hidden: role !== 'USER'  },
+      { title: 'Admin Dashboard', icon: 'grid-outline', link: '/admin-dashboard', hidden: !isAdmin },
+      { title: 'User Dashboard',  icon: 'person-outline', link: '/user-dashboard',  hidden: isAdmin  },
     ];
 
     const showcase: any[] = [
-      { title: 'E-commerce',    icon: 'shopping-cart-outline', expanded: false,
-        children: [{ title: 'Coming soon', disabled: true }] },
+      { title: 'E-commerce', icon: 'shopping-cart-outline', expanded: false,
+        children: [{ title: 'Dashboard', link: '/ecommerce' }] },
+
       { title: 'IoT Dashboard', icon: 'home-outline', expanded: false,
-        children: [{ title: 'Coming soon', disabled: true }] },
+        children: [{ title: 'Dashboard', link: '/iot' }] },
 
       { title: 'FEATURES', group: true },
 
-      { title: 'Layout', icon: 'layout-outline', 
+      { title: 'Layout', icon: 'layout-outline',
         children: [{ title: 'Columns & Cards', link: '/layout' }] },
+
       { title: 'Forms', icon: 'edit-2-outline',
         children: [{ title: 'Alarm Filter', link: '/forms' }] },
+
       { title: 'UI Features', icon: 'grid-outline',
         children: [{ title: 'Components', link: '/ui' }] },
+
       { title: 'Modal & Overlays', icon: 'options-2-outline',
         children: [{ title: 'Dialogs & Toastr', link: '/overlays' }] },
-      { title: 'Extra Components', icon: 'layers-outline',
+
+      // Admin-only
+      { title: 'Extra Components', icon: 'layers-outline', adminOnly: true,
         children: [{ title: 'Maintenance Wizard', link: '/wizard' }] },
-      { title: 'Maps', icon: 'map-outline', 
+
+      { title: 'Maps', icon: 'map-outline',
         children: [{ title: 'Devices Map', link: '/maps' }] },
+
       { title: 'Charts', icon: 'pie-chart-outline',
         children: [{ title: 'Analytics', link: '/charts' }] },
-      { title: 'Editors', icon: 'edit-2-outline', 
+
+      // Admin-only
+      { title: 'Editors', icon: 'edit-2-outline', adminOnly: true,
         children: [{ title: 'Maintenance Notes', link: '/editors' }] },
+
       { title: 'Tables & Data', icon: 'grid-outline',
         children: [{ title: 'Simple Table', link: '/tables' }] },
-      { title: 'Miscellaneous',    icon: 'shuffle-2-outline',
-        children: [{ title: 'Coming soon', disabled: true }] },
-      { title: 'Auth',             icon: 'unlock-outline',
-        children: [{ title: 'Coming soon', disabled: true }] },
+
+      { title: 'Miscellaneous', icon: 'pantone-outline',
+        children: [{ title: 'Misc Pages', link: '/misc' }] },
+
+      { title: 'Auth', icon: 'lock-outline',
+        children: [{ title: 'Login & Register', link: '/auth' }] },
     ];
 
-    return [...base, ...showcase];
+    const prune = (items: any[]): any[] =>
+      items
+        .filter(i => !i.hidden)                                     
+        .filter(i => !(i.adminOnly && !isAdmin))                    
+        .map(i => {
+          if (i.children && Array.isArray(i.children)) {
+            const kids = prune(i.children);
+            if (!kids.length) return null as any;
+            return { ...i, children: kids };
+          }
+          return i;
+        })
+        .filter(Boolean);
+
+    return prune([...base, ...showcase]);
   }
 }

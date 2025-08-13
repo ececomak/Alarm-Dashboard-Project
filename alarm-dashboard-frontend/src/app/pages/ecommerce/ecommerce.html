@@ -1,0 +1,49 @@
+<h2 class="page-title">
+  <nb-icon icon="shopping-cart-outline"></nb-icon>
+  E-commerce Dashboard
+</h2>
+
+<div class="grid kpis">
+  <nb-card *ngFor="let k of kpis" class="kpi">
+    <nb-card-body>
+      <div class="kpi-row">
+        <nb-icon [icon]="k.icon" [status]="k.status"></nb-icon>
+        <div class="kpi-meta">
+          <div class="kpi-title">{{ k.title }}</div>
+          <div class="kpi-value">{{ k.value }}</div>
+        </div>
+      </div>
+    </nb-card-body>
+  </nb-card>
+</div>
+
+<div class="grid charts-2">
+  <nb-card>
+    <nb-card-header>Sales (7 days)</nb-card-header>
+    <nb-card-body><div #salesEl class="echart"></div></nb-card-body>
+  </nb-card>
+
+  <nb-card>
+    <nb-card-header>Revenue Breakdown</nb-card-header>
+    <nb-card-body><div #revenueEl class="echart"></div></nb-card-body>
+  </nb-card>
+</div>
+
+<nb-card>
+  <nb-card-header>Top Products</nb-card-header>
+  <nb-card-body>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Product</th><th>SKU</th><th>Price</th><th>Sold</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let p of products">
+            <td>{{ p.name }}</td>
+            <td>{{ p.sku }}</td>
+            <td>${{ p.price }}</td>
+            <td>{{ p.sold }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </nb-card-body>
+</nb-card>
