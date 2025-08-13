@@ -8,6 +8,44 @@
 </div>
 
 <nb-card>
+  <nb-card-header>Live Alarms</nb-card-header>
+  <nb-card-body>
+    <div class="flex" style="gap:16px; align-items:center; margin-bottom:8px;">
+      <strong>Toplam Aktif (son 10 dk):</strong>
+      <span class="badge">
+        {{ (totalActive$ | async) ?? 0 }}
+      </span>
+    </div>
+
+    <table class="table" *ngIf="(recent$ | async) as recent; else empty">
+      <thead>
+        <tr>
+          <th>Time</th><th>Location</th><th>Level</th><th>Message</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let e of recent | slice:0:5">
+          <td>{{ e.timestamp | date:'shortTime' }}</td>
+          <td>{{ e.location }}</td>
+          <td>
+            <span [ngClass]="{
+              'text-danger': e.level === 'CRITICAL',
+              'text-warning': e.level === 'WARN',
+              'text-info': e.level === 'INFO'
+            }">{{ e.level }}</span>
+          </td>
+          <td>{{ e.message }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <ng-template #empty>
+      <em>Bağlantı bekleniyor…</em>
+    </ng-template>
+  </nb-card-body>
+</nb-card>
+
+<nb-card>
   <nb-card-header>Weekly Alarms</nb-card-header>
   <nb-card-body>
     <div #trendEl class="echart"></div>

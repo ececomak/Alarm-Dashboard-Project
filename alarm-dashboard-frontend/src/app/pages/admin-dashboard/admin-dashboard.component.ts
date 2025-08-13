@@ -1,5 +1,9 @@
-import { Component, AfterViewInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import { Component, AfterViewInit, OnDestroy, ElementRef, ViewChild, OnInit } from '@angular/core';
 import * as echarts from 'echarts';
+import { Observable, Subscription } from 'rxjs';
+import { AlarmStoreService } from '../../core/realtime/alarm-store.service';
+import { AlarmSocketService } from '../../core/realtime/alarm-socket.service';
+import { AlarmEvent } from '../../core/realtime/alarm-event';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -7,7 +11,7 @@ import * as echarts from 'echarts';
   templateUrl: './admin-dashboard.html',
   styleUrls: ['./admin-dashboard.css'],
 })
-export class AdminDashboardComponent implements AfterViewInit, OnDestroy {
+export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   email = localStorage.getItem('email') || '';
 
   stats = [
@@ -22,11 +26,39 @@ export class AdminDashboardComponent implements AfterViewInit, OnDestroy {
   @ViewChild('barEl',    { static: true }) barEl!: ElementRef<HTMLDivElement>;
   @ViewChild('gaugeEl',  { static: true }) gaugeEl!: ElementRef<HTMLDivElement>;
 
+  totalActive$!: Observable<number>;
+  recent$!: Observable<AlarmEvent[]>;
+
+  private trendChart?: echarts.ECharts;
+  private pieChart?: echarts.ECharts;
+  private barChart?: echarts.ECharts;
+  private gaugeChart?: echarts.ECharts;
+
   private charts: echarts.ECharts[] = [];
+  private subs: Subscription[] = [];
+
+  constructor(
+    private alarmStore: AlarmStoreService,
+    private alarmSocket: AlarmSocketService,
+  ) {}
+
+  ngOnInit(): void {
+    this.totalActive$ = this.alarmStore.totalActive$;
+    this.recent$ = this.alarmStore.recent$;
+
+    this.alarmSocket.connect();
+
+    this.subs.push(
+      this.recent$.subscribe(list => {
+        this.updateSeverityPie(list);
+        this.updateHourlyBar(list);
+      })
+    );
+  }
 
   ngAfterViewInit(): void {
-    const trend = echarts.init(this.trendEl.nativeElement);
-    trend.setOption({
+    this.trendChart = echarts.init(this.trendEl.nativeElement);
+    this.trendChart.setOption({
       tooltip: { trigger: 'axis' },
       grid: { left: 28, right: 12, top: 24, bottom: 24 },
       xAxis: { type: 'category', data: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] },
@@ -37,8 +69,8 @@ export class AdminDashboardComponent implements AfterViewInit, OnDestroy {
       ],
     });
 
-    const pie = echarts.init(this.pieEl.nativeElement);
-    pie.setOption({
+    this.pieChart = echarts.init(this.pieEl.nativeElement);
+    this.pieChart.setOption({
       tooltip: { trigger: 'item' },
       legend: { bottom: 0 },
       series: [{
@@ -47,24 +79,24 @@ export class AdminDashboardComponent implements AfterViewInit, OnDestroy {
         radius: ['40%','70%'],
         avoidLabelOverlap: true,
         data: [
-          { value: 5,  name: 'Critical' },
-          { value: 21, name: 'Warning'  },
-          { value: 16, name: 'Info'     },
+          { value: 0, name: 'Critical' },
+          { value: 0, name: 'Warning'  },
+          { value: 0, name: 'Info'     },
         ],
       }],
     });
 
-    const bar = echarts.init(this.barEl.nativeElement);
-    bar.setOption({
+    this.barChart = echarts.init(this.barEl.nativeElement);
+    this.barChart.setOption({
       tooltip: { trigger: 'axis' },
       grid: { left: 28, right: 12, top: 24, bottom: 24 },
-      xAxis: { type: 'category', data: Array.from({length: 12}, (_,i)=> `${i*2}:00`) },
+      xAxis: { type: 'category', data: this.lastNHoursLabels(12) }, 
       yAxis: { type: 'value' },
-      series: [{ type: 'bar', barMaxWidth: 24, data: [3,6,4,5,2,7,8,6,4,9,5,3] }],
+      series: [{ type: 'bar', barMaxWidth: 24, data: new Array(12).fill(0) }],
     });
 
-    const gauge = echarts.init(this.gaugeEl.nativeElement);
-    gauge.setOption({
+    this.gaugeChart = echarts.init(this.gaugeEl.nativeElement);
+    this.gaugeChart.setOption({
       series: [{
         type: 'gauge',
         min: 0, max: 100,
@@ -73,14 +105,76 @@ export class AdminDashboardComponent implements AfterViewInit, OnDestroy {
       }],
     });
 
-    this.charts.push(trend, pie, bar, gauge);
+    this.charts.push(this.trendChart, this.pieChart, this.barChart, this.gaugeChart);
     window.addEventListener('resize', this.handleResize);
   }
 
   ngOnDestroy(): void {
     window.removeEventListener('resize', this.handleResize);
+    this.subs.forEach(s => s.unsubscribe());
+    this.alarmSocket.disconnect();
     this.charts.forEach(c => c.dispose());
   }
 
   private handleResize = () => this.charts.forEach(c => c.resize());
+
+  private updateSeverityPie(list: AlarmEvent[]) {
+    if (!this.pieChart) return;
+    let critical = 0, warn = 0, info = 0;
+    for (const e of list) {
+      if (e.level === 'CRITICAL') critical++;
+      else if (e.level === 'WARN') warn++;
+      else if (e.level === 'INFO') info++;
+    }
+    const data = [
+      { value: critical, name: 'Critical' },
+      { value: warn,     name: 'Warning'  },
+      { value: info,     name: 'Info'     },
+    ];
+    this.pieChart.setOption({ series: [{ data }] });
+  }
+
+  private updateHourlyBar(list: AlarmEvent[]) {
+    if (!this.barChart) return;
+
+    const hours = 12; 
+    const now = new Date();
+    const labels = this.lastNHoursLabels(hours); 
+    const startTimes: number[] = [];
+    for (let i = hours - 1; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 60 * 60 * 1000);
+      d.setMinutes(0, 0, 0);
+      startTimes.push(d.getTime());
+    }
+    const endBoundary = new Date(now);
+    endBoundary.setMinutes(0, 0, 0);
+    const boundaries = [...startTimes, endBoundary.getTime() + 60 * 60 * 1000];
+
+    const counts = new Array(hours).fill(0);
+    for (const e of list) {
+      const t = new Date(e.timestamp).getTime();
+      if (isNaN(t)) continue;
+      for (let i = 0; i < hours; i++) {
+        if (t >= boundaries[i] && t < boundaries[i + 1]) {
+          counts[i]++; break;
+        }
+      }
+    }
+
+    this.barChart.setOption({
+      xAxis: { data: labels },
+      series: [{ type: 'bar', barMaxWidth: 24, data: counts }],
+    });
+  }
+
+  private lastNHoursLabels(n: number): string[] {
+    const out: string[] = [];
+    const now = new Date();
+    for (let i = n - 1; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 60 * 60 * 1000);
+      const hh = d.getHours().toString().padStart(2, '0');
+      out.push(`${hh}:00`);
+    }
+    return out;
+  }
 }
