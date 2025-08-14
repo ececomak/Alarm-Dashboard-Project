@@ -58,6 +58,14 @@ export class AlarmStoreService {
   private calendarMonthSub = new BehaviorSubject<Array<[string, number]>>([]);
   calendarMonth$ = this.calendarMonthSub.asObservable();
 
+  /** Last 60 min toplam (KPI) */
+  private last60mSub = new BehaviorSubject<number>(0);
+  last60m$ = this.last60mSub.asObservable();
+
+  /** Weekly Alarms (son 7 gün, günlere göre toplam) */
+  private weekly7Sub = new BehaviorSubject<{ labels: string[]; totals: number[] }>({ labels: [], totals: [] });
+  weekly7$ = this.weekly7Sub.asObservable();
+
   private typeToCategory: Record<string, string> = {
     POWER_OUTAGE: 'Power',
     FAN_FAILURE: 'Device',
@@ -134,6 +142,10 @@ export class AlarmStoreService {
 
     // calendar (ayın günleri)
     this.calendarMonthSub.next(this.buildCalendarMonth(this.buffer));
+
+    // KPI & Weekly Alarms
+    this.last60mSub.next(last1h.length);
+    this.weekly7Sub.next(this.buildLast7Days(this.buffer, now));
   }
 
   private countSeverity(list: AlarmEvent[]) {
@@ -189,7 +201,7 @@ export class AlarmStoreService {
   private buildHourly12BySeverity(list: AlarmEvent[], nowMs: number) {
     const hours = 12;
     const labels: string[] = [];
-    const boundaries: number[] = [];
+       const boundaries: number[] = [];
 
     for (let i = hours - 1; i >= 0; i--) {
       const d = new Date(nowMs - i * 60 * 60 * 1000);
@@ -236,6 +248,32 @@ export class AlarmStoreService {
       const key = `${y}-${pad(m + 1)}-${pad(i + 1)}`;
       return [key, map.get(key) ?? 0] as [string, number];
     });
+  }
+
+  /** Son 7 gün, günlere göre toplam (Sun..Sat) */
+  private buildLast7Days(list: AlarmEvent[], nowMs: number) {
+    const dayMs = 24 * 60 * 60 * 1000;
+    const names = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+    const labels: string[] = [];
+    const boundaries: number[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(nowMs - i * dayMs);
+      d.setHours(0,0,0,0);
+      labels.push(names[d.getDay()]);
+      boundaries.push(d.getTime());
+    }
+    boundaries.push(boundaries[boundaries.length - 1] + dayMs);
+
+    const totals = new Array(7).fill(0);
+    for (const e of list) {
+      const t = new Date(e.timestamp).getTime();
+      if (isNaN(t)) continue;
+      for (let i = 0; i < 7; i++) {
+        if (t >= boundaries[i] && t < boundaries[i + 1]) { totals[i]++; break; }
+      }
+    }
+    return { labels, totals };
   }
 
   private sortDesc(list: AlarmEvent[]) {

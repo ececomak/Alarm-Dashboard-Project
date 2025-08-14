@@ -3,6 +3,10 @@ import { Router, NavigationEnd, Event as RouterEvent } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { NbThemeService, NbSidebarService } from '@nebular/theme';
 
+import { AlarmSocketService } from './core/realtime/alarm-socket.service';
+import { AlarmSnapshotService } from './core/realtime/alarm-snapshot.service';
+import { AlarmStoreService } from './core/realtime/alarm-store.service';
+
 @Component({
   selector: 'app-root',
   standalone: false,
@@ -16,10 +20,16 @@ export class App {
   currentTheme = localStorage.getItem('theme') || 'default';
   menuItems: any[] = [];
 
+  private realtimeStarted = false;
+
   constructor(
     private router: Router,
     private theme: NbThemeService,
     private sidebar: NbSidebarService,
+
+    private socket: AlarmSocketService,
+    private snapshot: AlarmSnapshotService,
+    private store: AlarmStoreService,
   ) {
     this.theme.changeTheme(this.currentTheme);
 
@@ -33,6 +43,21 @@ export class App {
         this.role = (localStorage.getItem('role') || '').toUpperCase().replace('İ', 'I');
 
         this.menuItems = this.buildMenu(this.role);
+
+        if (this.showShell && !this.realtimeStarted) {
+          this.realtimeStarted = true;
+
+          const token = localStorage.getItem('token') || undefined;
+          this.socket.connect(token); 
+
+          this.snapshot
+            .loadRecentAndHydrate(evts => this.store.hydrate(evts), 10)
+            .catch(err => console.warn('[SNAPSHOT recent] failed', err));
+
+          this.snapshot
+            .loadMonthSinceFirstDay(evts => this.store.hydrate(evts))
+            .catch(err => console.warn('[SNAPSHOT month] failed', err));
+        }
       });
   }
 
@@ -45,7 +70,6 @@ export class App {
   toggleSidebar() {
     this.sidebar.toggle(true, 'menu-sidebar');
   }
-
 
   private buildMenu(role: string): any[] {
     const isAdmin = role === 'ADMIN';
@@ -102,8 +126,8 @@ export class App {
 
     const prune = (items: any[]): any[] =>
       items
-        .filter(i => !i.hidden)                                     
-        .filter(i => !(i.adminOnly && !isAdmin))                    
+        .filter(i => !i.hidden)
+        .filter(i => !(i.adminOnly && !isAdmin))
         .map(i => {
           if (i.children && Array.isArray(i.children)) {
             const kids = prune(i.children);

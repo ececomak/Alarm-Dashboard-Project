@@ -2,9 +2,7 @@ import { Component, AfterViewInit, OnDestroy, ElementRef, ViewChild, OnInit } fr
 import * as echarts from 'echarts';
 import { Observable, Subscription, combineLatest } from 'rxjs';
 import { AlarmStoreService } from '../../core/realtime/alarm-store.service';
-import { AlarmSocketService } from '../../core/realtime/alarm-socket.service';
 import { AlarmEvent } from '../../core/realtime/alarm-event';
-import { AlarmSnapshotService } from '../../core/realtime/alarm-snapshot.service';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -41,28 +39,15 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
   /** Dinamik rozet: '10m' | '1h' | '—' */
   sevPieLabel: string = '—';
 
-  constructor(
-    private alarmStore: AlarmStoreService,
-    private alarmSocket: AlarmSocketService,
-    private snapshot: AlarmSnapshotService
-  ) {}
+  constructor(private alarmStore: AlarmStoreService) {}
 
   ngOnInit(): void {
     this.totalActive$ = this.alarmStore.totalActive$;
     this.recent$ = this.alarmStore.recent$;
-
-    this.alarmSocket.connect();
-
-    this.snapshot
-      .loadRecentAndHydrate(evts => this.alarmStore.hydrate(evts), 10)
-      .catch(err => console.warn('[SNAPSHOT recent] failed', err));
-
-    this.snapshot
-      .loadMonthSinceFirstDay(evts => this.alarmStore.hydrate(evts))
-      .catch(err => console.warn('[SNAPSHOT month] failed', err));
   }
 
   ngAfterViewInit(): void {
+    // Trend (Weekly)
     this.trendChart = echarts.init(this.trendEl.nativeElement);
     this.trendChart.setOption({
       tooltip: { trigger: 'axis' },
@@ -71,10 +56,11 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
       yAxis: { type: 'value' },
       series: [
         { type: 'line', smooth: true, areaStyle: {}, symbolSize: 6, data: [120, 280, 150, 80, 70, 220, 180] },
-        { type: 'line', smooth: true, symbolSize: 6, data: [60, 130, 90, 40, 50, 110, 95] },
+        { type: 'line', smooth: true,                     symbolSize: 6, data: [60, 130, 90, 40, 50, 110, 95] },
       ],
     });
 
+    // Pie
     this.pieChart = echarts.init(this.pieEl.nativeElement);
     this.pieChart.setOption({
       tooltip: { trigger: 'item' },
@@ -92,6 +78,7 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
       }],
     });
 
+    // Hourly bar
     this.barChart = echarts.init(this.barEl.nativeElement);
     this.barChart.setOption({
       tooltip: { trigger: 'axis' },
@@ -101,6 +88,7 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
       series: [{ type: 'bar', barMaxWidth: 24, data: new Array(12).fill(0) }],
     });
 
+    // Gauge
     this.gaugeChart = echarts.init(this.gaugeEl.nativeElement);
     this.gaugeChart.setOption({
       series: [{
@@ -114,7 +102,7 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
     this.charts.push(this.trendChart, this.pieChart, this.barChart, this.gaugeChart);
     window.addEventListener('resize', this.handleResize);
 
-    // --- Pie (10m -> boşsa 1h) + dinamik rozet ---
+    // Pie (10m -> boşsa 1h) + dinamik rozet
     this.subs.push(
       combineLatest([this.alarmStore.bySeverity10m$, this.alarmStore.bySeverity1h$])
         .subscribe(([sev10, sev1h]) => {
@@ -137,7 +125,7 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
         })
     );
 
-    // --- Bar (12h toplam) ---
+    // Bar (12h toplam)
     this.subs.push(
       this.alarmStore.hourly12$.subscribe(({ labels, counts }) => {
         if (!this.barChart) return;
@@ -147,12 +135,35 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
         });
       })
     );
+
+    // KPI'lar
+    this.subs.push(
+      this.alarmStore.totalActive$.subscribe(v => this.stats[0].value = v),
+      (this.alarmStore as any).last60m$?.subscribe?.((v: number) => this.stats[1].value = v),
+      this.alarmStore.bySeverity10m$.subscribe(sev => {
+        this.stats[2].value = sev.CRITICAL;
+        this.stats[3].value = sev.WARN;
+      }),
+    );
+
+    // Weekly Alarms (7 gün)
+    this.subs.push(
+      (this.alarmStore as any).weekly7$?.subscribe?.(({ labels, totals }: any) => {
+        if (!this.trendChart) return;
+        this.trendChart.setOption({
+          xAxis: { data: labels },
+          series: [
+            { type: 'line', smooth: true, areaStyle: {}, symbolSize: 6, data: totals },
+            { type: 'line', smooth: true,                     symbolSize: 6, data: totals },
+          ],
+        });
+      })
+    );
   }
 
   ngOnDestroy(): void {
     window.removeEventListener('resize', this.handleResize);
     this.subs.forEach(s => s.unsubscribe());
-    this.alarmSocket.disconnect();
     this.charts.forEach(c => c.dispose());
   }
 
