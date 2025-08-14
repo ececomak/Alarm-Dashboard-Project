@@ -1,4 +1,7 @@
 import { Component } from '@angular/core';
+import { Observable } from 'rxjs';
+import { AlarmStoreService } from '../../core/realtime/alarm-store.service';
+import { AlarmEvent } from '../../core/realtime/alarm-event';
 
 @Component({
   selector: 'app-user-dashboard',
@@ -22,4 +25,15 @@ export class UserDashboardComponent {
     { time: '08:45', text: 'Tunnel-4: Info received' },
     { time: 'Yesterday', text: 'Tunnel-1: Critical resolved' },
   ];
+
+  // Live
+  totalActive$!: Observable<number>;
+  recent$!: Observable<AlarmEvent[]>;
+
+  constructor(private store: AlarmStoreService) {}
+
+  ngOnInit(): void {
+    this.totalActive$ = this.store.totalActive$;
+    this.recent$ = this.store.recent$;
+  }
 }

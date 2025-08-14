@@ -1,9 +1,10 @@
 import { Component, AfterViewInit, OnDestroy, ElementRef, ViewChild, OnInit } from '@angular/core';
 import * as echarts from 'echarts';
-import { Observable, Subscription } from 'rxjs';
+import { Observable, Subscription, combineLatest } from 'rxjs';
 import { AlarmStoreService } from '../../core/realtime/alarm-store.service';
 import { AlarmSocketService } from '../../core/realtime/alarm-socket.service';
 import { AlarmEvent } from '../../core/realtime/alarm-event';
+import { AlarmSnapshotService } from '../../core/realtime/alarm-snapshot.service';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -37,9 +38,13 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
   private charts: echarts.ECharts[] = [];
   private subs: Subscription[] = [];
 
+  /** Dinamik rozet: '10m' | '1h' | '—' */
+  sevPieLabel: string = '—';
+
   constructor(
     private alarmStore: AlarmStoreService,
     private alarmSocket: AlarmSocketService,
+    private snapshot: AlarmSnapshotService
   ) {}
 
   ngOnInit(): void {
@@ -48,12 +53,13 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
 
     this.alarmSocket.connect();
 
-    this.subs.push(
-      this.recent$.subscribe(list => {
-        this.updateSeverityPie(list);
-        this.updateHourlyBar(list);
-      })
-    );
+    this.snapshot
+      .loadRecentAndHydrate(evts => this.alarmStore.hydrate(evts), 10)
+      .catch(err => console.warn('[SNAPSHOT recent] failed', err));
+
+    this.snapshot
+      .loadMonthSinceFirstDay(evts => this.alarmStore.hydrate(evts))
+      .catch(err => console.warn('[SNAPSHOT month] failed', err));
   }
 
   ngAfterViewInit(): void {
@@ -90,7 +96,7 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
     this.barChart.setOption({
       tooltip: { trigger: 'axis' },
       grid: { left: 28, right: 12, top: 24, bottom: 24 },
-      xAxis: { type: 'category', data: this.lastNHoursLabels(12) }, 
+      xAxis: { type: 'category', data: this.lastNHoursLabels(12) },
       yAxis: { type: 'value' },
       series: [{ type: 'bar', barMaxWidth: 24, data: new Array(12).fill(0) }],
     });
@@ -107,6 +113,40 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
 
     this.charts.push(this.trendChart, this.pieChart, this.barChart, this.gaugeChart);
     window.addEventListener('resize', this.handleResize);
+
+    // --- Pie (10m -> boşsa 1h) + dinamik rozet ---
+    this.subs.push(
+      combineLatest([this.alarmStore.bySeverity10m$, this.alarmStore.bySeverity1h$])
+        .subscribe(([sev10, sev1h]) => {
+          const sum10 = sev10.CRITICAL + sev10.WARN + sev10.INFO;
+          const sum1h = sev1h.CRITICAL + sev1h.WARN + sev1h.INFO;
+
+          const use = sum10 > 0 ? sev10 : sev1h;
+          this.sevPieLabel = sum10 > 0 ? '10m' : (sum1h > 0 ? '1h' : '—');
+
+          if (!this.pieChart) return;
+          this.pieChart.setOption({
+            series: [{
+              data: [
+                { value: use.CRITICAL, name: 'Critical' },
+                { value: use.WARN,     name: 'Warning'  },
+                { value: use.INFO,     name: 'Info'     },
+              ],
+            }],
+          });
+        })
+    );
+
+    // --- Bar (12h toplam) ---
+    this.subs.push(
+      this.alarmStore.hourly12$.subscribe(({ labels, counts }) => {
+        if (!this.barChart) return;
+        this.barChart.setOption({
+          xAxis: { data: labels },
+          series: [{ type: 'bar', barMaxWidth: 24, data: counts }],
+        });
+      })
+    );
   }
 
   ngOnDestroy(): void {
@@ -117,55 +157,6 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private handleResize = () => this.charts.forEach(c => c.resize());
-
-  private updateSeverityPie(list: AlarmEvent[]) {
-    if (!this.pieChart) return;
-    let critical = 0, warn = 0, info = 0;
-    for (const e of list) {
-      if (e.level === 'CRITICAL') critical++;
-      else if (e.level === 'WARN') warn++;
-      else if (e.level === 'INFO') info++;
-    }
-    const data = [
-      { value: critical, name: 'Critical' },
-      { value: warn,     name: 'Warning'  },
-      { value: info,     name: 'Info'     },
-    ];
-    this.pieChart.setOption({ series: [{ data }] });
-  }
-
-  private updateHourlyBar(list: AlarmEvent[]) {
-    if (!this.barChart) return;
-
-    const hours = 12; 
-    const now = new Date();
-    const labels = this.lastNHoursLabels(hours); 
-    const startTimes: number[] = [];
-    for (let i = hours - 1; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 60 * 60 * 1000);
-      d.setMinutes(0, 0, 0);
-      startTimes.push(d.getTime());
-    }
-    const endBoundary = new Date(now);
-    endBoundary.setMinutes(0, 0, 0);
-    const boundaries = [...startTimes, endBoundary.getTime() + 60 * 60 * 1000];
-
-    const counts = new Array(hours).fill(0);
-    for (const e of list) {
-      const t = new Date(e.timestamp).getTime();
-      if (isNaN(t)) continue;
-      for (let i = 0; i < hours; i++) {
-        if (t >= boundaries[i] && t < boundaries[i + 1]) {
-          counts[i]++; break;
-        }
-      }
-    }
-
-    this.barChart.setOption({
-      xAxis: { data: labels },
-      series: [{ type: 'bar', barMaxWidth: 24, data: counts }],
-    });
-  }
 
   private lastNHoursLabels(n: number): string[] {
     const out: string[] = [];

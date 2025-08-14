@@ -1,21 +1,33 @@
 <div class="grid">
   <nb-card>
-    <nb-card-header>Traffic (Stacked Area)</nb-card-header>
+    <nb-card-header style="display:flex;justify-content:space-between;align-items:center">
+      <span>Traffic (Stacked Area)</span>
+      <span class="chip" style="font-size:12px;padding:2px 8px;border-radius:10px;background:#eef;">12h</span>
+    </nb-card-header>
     <nb-card-body><div #areaEl class="echart"></div></nb-card-body>
   </nb-card>
 
   <nb-card>
-    <nb-card-header>Category Share (Rose Pie)</nb-card-header>
+    <nb-card-header style="display:flex;justify-content:space-between;align-items:center">
+      <span>Category Share (Rose Pie)</span>
+      <span class="chip" style="font-size:12px;padding:2px 8px;border-radius:10px;background:#eef;">1h</span>
+    </nb-card-header>
     <nb-card-body><div #roseEl class="echart"></div></nb-card-body>
   </nb-card>
 
   <nb-card class="span-2">
-    <nb-card-header>Daily Activity (Calendar Heatmap)</nb-card-header>
+    <nb-card-header style="display:flex;justify-content:space-between;align-items:center">
+      <span>Daily Activity (Calendar Heatmap)</span>
+      <span class="chip" style="font-size:12px;padding:2px 8px;border-radius:10px;background:#eef;">This month</span>
+    </nb-card-header>
     <nb-card-body><div #calendarEl class="echart tall"></div></nb-card-body>
   </nb-card>
 
   <nb-card class="span-2">
-    <nb-card-header>System Score (Radar)</nb-card-header>
+    <nb-card-header style="display:flex;justify-content:space-between;align-items:center">
+      <span>System Score (Radar)</span>
+      <span class="chip" style="font-size:12px;padding:2px 8px;border-radius:10px;background:#eef;">10m</span>
+    </nb-card-header>
     <nb-card-body><div #radarEl class="echart"></div></nb-card-body>
   </nb-card>
 </div>

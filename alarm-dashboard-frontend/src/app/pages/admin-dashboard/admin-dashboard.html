@@ -8,7 +8,10 @@
 </div>
 
 <nb-card>
-  <nb-card-header>Live Alarms</nb-card-header>
+  <nb-card-header style="display:flex;justify-content:space-between;align-items:center">
+    <span>Live Alarms</span>
+    <span class="chip" style="font-size:12px;padding:2px 8px;border-radius:10px;background:#eef;">10m</span>
+  </nb-card-header>
   <nb-card-body>
     <div class="flex" style="gap:16px; align-items:center; margin-bottom:8px;">
       <strong>Toplam Aktif (son 10 dk):</strong>
@@ -54,14 +57,23 @@
 
 <div class="grid charts-2">
   <nb-card>
-    <nb-card-header>Severity Distribution</nb-card-header>
+    <nb-card-header style="display:flex;justify-content:space-between;align-items:center">
+      <span>Severity Distribution</span>
+      <!-- 10m doluysa 10m, boşsa 1h -->
+        <span class="chip" style="font-size:12px;padding:2px 8px;border-radius:10px;background:#eef;">
+    {{ sevPieLabel }}
+  </span>
+    </nb-card-header>
     <nb-card-body>
       <div #pieEl class="echart"></div>
     </nb-card-body>
   </nb-card>
 
   <nb-card>
-    <nb-card-header>Hourly Activity</nb-card-header>
+    <nb-card-header style="display:flex;justify-content:space-between;align-items:center">
+      <span>Hourly Activity</span>
+      <span class="chip" style="font-size:12px;padding:2px 8px;border-radius:10px;background:#eef;">12h</span>
+    </nb-card-header>
     <nb-card-body>
       <div #barEl class="echart"></div>
     </nb-card-body>
