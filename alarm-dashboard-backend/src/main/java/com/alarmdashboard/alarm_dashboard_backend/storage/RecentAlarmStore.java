@@ -23,7 +23,7 @@ public class RecentAlarmStore {
         List<AlarmEvent> out = new ArrayList<>();
         for (AlarmEvent e : buf) {
             if (e.timestamp() != null && !e.timestamp().isBefore(since)) out.add(e);
-            else break; // en yeni başta; gerisi daha eskidir
+            else break;
         }
         return out;
     }

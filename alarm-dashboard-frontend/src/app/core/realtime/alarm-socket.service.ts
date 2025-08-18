@@ -7,7 +7,7 @@ import { AlarmEvent } from './alarm-event';
 @Injectable({ providedIn: 'root' })
 export class AlarmSocketService {
   private client?: Client;
-  private bootstrapped = false; 
+  private bootstrapped = false;
 
   constructor(private store: AlarmStoreService) {}
 
@@ -16,27 +16,52 @@ export class AlarmSocketService {
     if (this.bootstrapped && this.client?.active) return;
 
     this.client = new Client({
-      webSocketFactory: () => new (SockJS as any)('http://localhost:8080/ws'),
+      webSocketFactory: () => new (SockJS as any)('/ws'),
       reconnectDelay: 5000,
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
-      debug: () => {} 
+      heartbeatIncoming: 10000,
+      heartbeatOutgoing: 10000,
+      // Tanı kolaylığı için debug açık
+      debug: (msg) => console.log('[STOMP]', msg),
     });
 
     this.client.onConnect = () => {
       this.bootstrapped = true;
+
+      // 1) Bootstrap listesi (sadece bu oturuma)
+      this.client!.subscribe('/user/queue/alarms-bootstrap', (msg: IMessage) => {
+        try {
+          const rawList = JSON.parse(msg.body) as any[];
+          const nowIso = new Date().toISOString();
+          const list: AlarmEvent[] = rawList.map(r => {
+            const ev = this.normalize(r);
+            // geldiği an öncelikli
+            ev.arrivedAt = ev.arrivedAt ?? ev.createdAt ?? nowIso;
+            return ev;
+          });
+          this.store.hydrate(list);
+        } catch (e) {
+          console.error('[WS] bootstrap parse error', e);
+        }
+      });
+
+      // 2) CANLI: tek tek olaylar
       this.client!.subscribe('/topic/alarms', (msg: IMessage) => {
         try {
           const raw = JSON.parse(msg.body);
-          const ev = this.normalize(raw) as AlarmEvent;
+          const ev = this.normalize(raw);
+          ev.arrivedAt = new Date().toISOString();  // canlı geliş anı
           this.store.push(ev);
         } catch (e) {
-          console.error('[WS] parse error', e);
+          console.error('[WS] live parse error', e);
         }
       });
     };
 
-    this.client.onStompError = f => console.error('[WS] broker error', f);
-    this.client.onWebSocketClose = () => console.warn('[WS] closed');
+    this.client.onStompError = f => {
+      console.error('[WS ERROR]', f.headers['message'], f.body);
+    };
+    this.client.onWebSocketClose = (evt) => console.warn('[WS CLOSED]', evt);
 
     this.client.activate();
   }
@@ -46,18 +71,21 @@ export class AlarmSocketService {
     this.bootstrapped = false;
   }
 
+  /** Backend’ten geleni tek tipe indirger */
   private normalize(e: any): AlarmEvent {
     const level = String(e.level || '').toUpperCase().replace('WARNING', 'WARN');
-    const ts = new Date(e.timestamp);
+    const ts = new Date(e.timestamp ?? e.time ?? e.ts);
     const timestamp = isNaN(ts.getTime()) ? new Date().toISOString() : ts.toISOString();
 
+    
     return {
-      id: e.id ?? `${Date.now()}`,
+      id: e.id ?? `${e.target ?? 'alarm'}@${timestamp}`,
       timestamp,
-      location: e.location ?? 'Unknown',
+      location: e.location ?? e.targetName ?? 'Unknown',
       level: (level === 'CRITICAL' || level === 'WARN' || level === 'INFO') ? level : 'INFO',
       type: e.type ?? 'INFO',
-      message: e.message ?? ''
-    };
+      message: e.message ?? e.text ?? '',
+      createdAt: e.createdAt
+    } as AlarmEvent;
   }
 }

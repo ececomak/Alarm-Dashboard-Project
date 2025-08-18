@@ -2,15 +2,6 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { AlarmEvent } from './alarm-event';
 
-/**
- * Realtime store (tek merkez):
- * - buffer: son 35 gün (persist: localStorage)
- * - recent$ (10 dk), totalActive$, bySeverity10m$, bySeverity1h$, hourly12$, hourly12BySeverity$,
- *   byCategory10m$, byCategory1h$, calendarMonth$
- * - hydrate(events): snapshot/yerelden MERGE
- * - push(event): WS’den yeni olay ekle
- */
-
 @Injectable({ providedIn: 'root' })
 export class AlarmStoreService {
   private buffer: AlarmEvent[] = [];
@@ -86,14 +77,22 @@ export class AlarmStoreService {
     } catch {}
   }
 
+  // --------- PUBLIC API ---------
+
   hydrate(events: AlarmEvent[]) {
-    const merged = this.mergeById([...events, ...this.buffer]);
+    const nowIso = new Date().toISOString();
+    const withArrived = events.map(e => ({ ...e, arrivedAt: e.arrivedAt ?? e.createdAt ?? nowIso }));
+    const merged = this.mergeById([...withArrived, ...this.buffer]);
     this.buffer = this.pruneBuffer(merged);
     this.recomputeDerived();
     this.persist();
   }
 
   push(event: AlarmEvent) {
+    // duplicate koruması
+    if (this.buffer.find(e => e.id === event.id)) return;
+
+    if (!event.arrivedAt) event.arrivedAt = new Date().toISOString();
     this.buffer.unshift(event);
     this.buffer = this.pruneBuffer(this.buffer);
     this.recomputeDerived();
@@ -102,10 +101,15 @@ export class AlarmStoreService {
 
   // ---------- yardımcılar ----------
 
+  /** BÜTÜN hesaplamalarda bu zamanı kullanıyoruz */
+  private getArrivedMs(e: AlarmEvent): number {
+    return new Date(e.arrivedAt ?? e.createdAt ?? e.timestamp).getTime();
+  }
+
   private pruneBuffer(list: AlarmEvent[]): AlarmEvent[] {
     const now = Date.now();
     const pruned = list.filter(e => {
-      const t = new Date(e.timestamp).getTime();
+      const t = this.getArrivedMs(e);
       return !isNaN(t) && now - t <= this.bufferWindowMs;
     });
     return pruned.length > this.persistMax ? pruned.slice(0, this.persistMax) : pruned;
@@ -114,36 +118,34 @@ export class AlarmStoreService {
   private recomputeDerived() {
     const now = Date.now();
 
-    // --- pencereler ---
+    // --- pencereler (arrival time) ---
     const win10m = 10 * 60 * 1000;
     const win1h  = 60 * 60 * 1000;
 
-    const recent10m = this.buffer.filter(e => now - new Date(e.timestamp).getTime() <= win10m);
-    const last1h    = this.buffer.filter(e => now - new Date(e.timestamp).getTime() <= win1h);
+    const recent10m = this.buffer.filter(e => now - this.getArrivedMs(e) <= win10m);
+    const last1h    = this.buffer.filter(e => now - this.getArrivedMs(e) <= win1h);
 
     // live 10m
     this.recent10mSub.next(recent10m);
     this.totalActiveSub.next(recent10m.length);
 
-    // severity 10m
+    // severity 10m / 1h
     this.bySeverity10mSub.next(this.countSeverity(recent10m));
-
-    // severity 1h
     this.bySeverity1hSub.next(this.countSeverity(last1h));
 
     // category 10m / 1h
     this.byCategory10mSub.next(this.countCategory(recent10m));
     this.byCategory1hSub.next(this.countCategory(last1h));
 
-    // hourly 12h (toplam) + bySeverity
+    // hourly 12h (arrival) + bySeverity
     const { labels, counts } = this.buildHourly12(this.buffer, now);
     this.hourly12Sub.next({ labels, counts });
     this.hourly12BySeveritySub.next(this.buildHourly12BySeverity(this.buffer, now));
 
-    // calendar (ayın günleri)
+    // calendar (ayın günleri) — arrival
     this.calendarMonthSub.next(this.buildCalendarMonth(this.buffer));
 
-    // KPI & Weekly Alarms
+    // KPI & Weekly Alarms — arrival
     this.last60mSub.next(last1h.length);
     this.weekly7Sub.next(this.buildLast7Days(this.buffer, now));
   }
@@ -153,7 +155,7 @@ export class AlarmStoreService {
     for (const e of list) {
       if (e.level === 'CRITICAL') s.CRITICAL++;
       else if (e.level === 'WARN') s.WARN++;
-      else if (e.level === 'INFO') s.INFO++;
+      else s.INFO++;
     }
     return s;
   }
@@ -174,6 +176,8 @@ export class AlarmStoreService {
     } catch {}
   }
 
+  // --- zaman serileri ARRIVAL ile ---
+
   private buildHourly12(list: AlarmEvent[], nowMs: number) {
     const hours = 12;
     const labels: string[] = [];
@@ -188,7 +192,7 @@ export class AlarmStoreService {
 
     const counts = new Array(hours).fill(0);
     for (const e of list) {
-      const t = new Date(e.timestamp).getTime();
+      const t = this.getArrivedMs(e);
       if (isNaN(t)) continue;
       for (let i = 0; i < hours; i++) {
         if (t >= boundaries[i] && t < boundaries[i + 1]) { counts[i]++; break; }
@@ -197,11 +201,10 @@ export class AlarmStoreService {
     return { labels, counts };
   }
 
-  /** Son 12 saatte CRITICAL/WARN/INFO ayrı ayrı sayım */
   private buildHourly12BySeverity(list: AlarmEvent[], nowMs: number) {
     const hours = 12;
     const labels: string[] = [];
-       const boundaries: number[] = [];
+    const boundaries: number[] = [];
 
     for (let i = hours - 1; i >= 0; i--) {
       const d = new Date(nowMs - i * 60 * 60 * 1000);
@@ -216,13 +219,13 @@ export class AlarmStoreService {
     const info     = new Array(hours).fill(0);
 
     for (const e of list) {
-      const t = new Date(e.timestamp).getTime();
+      const t = this.getArrivedMs(e);
       if (isNaN(t)) continue;
       for (let i = 0; i < hours; i++) {
         if (t >= boundaries[i] && t < boundaries[i + 1]) {
-          if (e.level === 'CRITICAL') critical[i]++;
-          else if (e.level === 'WARN') warn[i]++;
-          else if (e.level === 'INFO') info[i]++;
+          if (e.level === 'CRITICAL')      critical[i]++;
+          else if (e.level === 'WARN')     warn[i]++;
+          else                              info[i]++;
           break;
         }
       }
@@ -238,7 +241,7 @@ export class AlarmStoreService {
     const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
     const map = new Map<string, number>();
     for (const e of list) {
-      const d = new Date(e.timestamp);
+      const d = new Date(this.getArrivedMs(e));
       if (d.getFullYear() === y && d.getMonth() === m) {
         const key = `${y}-${pad(m + 1)}-${pad(d.getDate())}`;
         map.set(key, (map.get(key) ?? 0) + 1);
@@ -250,7 +253,6 @@ export class AlarmStoreService {
     });
   }
 
-  /** Son 7 gün, günlere göre toplam (Sun..Sat) */
   private buildLast7Days(list: AlarmEvent[], nowMs: number) {
     const dayMs = 24 * 60 * 60 * 1000;
     const names = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -267,7 +269,7 @@ export class AlarmStoreService {
 
     const totals = new Array(7).fill(0);
     for (const e of list) {
-      const t = new Date(e.timestamp).getTime();
+      const t = this.getArrivedMs(e);
       if (isNaN(t)) continue;
       for (let i = 0; i < 7; i++) {
         if (t >= boundaries[i] && t < boundaries[i + 1]) { totals[i]++; break; }
@@ -277,8 +279,9 @@ export class AlarmStoreService {
   }
 
   private sortDesc(list: AlarmEvent[]) {
-    return [...list].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return [...list].sort((a, b) => this.getArrivedMs(b) - this.getArrivedMs(a));
   }
+
   private mergeById(list: AlarmEvent[]) {
     const map = new Map<string, AlarmEvent>();
     for (const e of list) map.set(e.id, e);

@@ -50,7 +50,11 @@
       </thead>
       <tbody>
         <tr *ngFor="let e of recent | slice:0:5">
-          <td>{{ e.timestamp | date:'shortTime' }}</td>
+          <td>
+            <span title="event: {{ e.timestamp | date:'short' }}">
+            {{ (e.arrivedAt || e.createdAt || e.timestamp) | date:'short' }}
+            </span>
+          </td>
           <td>{{ e.location }}</td>
           <td>
             <span [ngClass]="{

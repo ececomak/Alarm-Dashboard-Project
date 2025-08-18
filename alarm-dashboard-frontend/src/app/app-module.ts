@@ -50,6 +50,7 @@ import {
   NbListModule,
 } from '@nebular/theme';
 import { NbEvaIconsModule } from '@nebular/eva-icons';
+import { RealtimeModule } from './core/realtime/realtime.module';
 
 @NgModule({
   declarations: [
@@ -105,6 +106,7 @@ import { NbEvaIconsModule } from '@nebular/eva-icons';
     ReactiveFormsModule,
     NbStepperModule,  
     NbListModule,
+    RealtimeModule,
   ],
   providers: [],
   bootstrap: [App],
