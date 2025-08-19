@@ -13,64 +13,73 @@ public class MqttAlarmMapper {
         this.om = om;
     }
 
-    /** SADE FİLTRE:
-     *  Target değeri case-insensitive olarak .../Alarm ile bitiyorsa true.
-     *  (başka hiçbir şeye bakmıyoruz)
+    /**
+     * Alarm mı?
+     * - Öncelik: payload.Target ya da MQTT topic (case-insensitive) ".../Alarm" ile bitiyorsa TRUE
+     * - Yedek: Value.Message dolu VEYA Value.Priority sayısal ise TRUE
      */
-    public boolean isAlarmLike(String json) {
+
+    public boolean isAlarmLike(String json, String mqttTopic) {
         try {
             JsonNode root = om.readTree(json);
-            String target = text(root, "Target", "");
-            return target != null && target.toUpperCase().endsWith("/ALARM");
+            String target = text(root, "Target", null);
+            String candidate = firstNonBlank(target, mqttTopic);
+            if (candidate != null && normalize(candidate).endsWith("/ALARM")) return true;
+
+            JsonNode v = root.path("Value");
+            boolean hasMsg = v.hasNonNull("Message") && !v.path("Message").asText("").isBlank();
+            boolean hasPr  = v.has("Priority") && v.path("Priority").isNumber();
+            return hasMsg || hasPr;
         } catch (Exception e) {
             return false;
         }
     }
 
-    /** JSON -> AlarmEvent (dayanıklı eşlem) */
-    public AlarmEvent toEvent(String json) {
+    /**
+     * JSON -> AlarmEvent
+     * createdAt (AlarmEvent.timestamp) = NOW (ARRIVAL) — UI tüm analizlerde arrivedAt/createdAt’i kullanıyor.
+     */
+
+    public AlarmEvent toEvent(String json, String mqttTopic) {
         try {
             JsonNode root = om.readTree(json);
             JsonNode v = root.path("Value");
 
-            String target = text(root, "Target", "UNKNOWN/Alarm");
+            // Target: payload.Target > topic > "UNKNOWN/Alarm"
+            String target = firstNonBlank(text(root, "Target", null), mqttTopic, "UNKNOWN/Alarm");
+            target = normalize(target);
 
-            // Zaman: Value.Start > Timestamp > now
-            Instant ts = parseInstant(text(v, "Start", null));
-            if (ts == null) ts = parseInstant(text(root, "Timestamp", null));
-            if (ts == null) ts = Instant.now();
-
-            // Konum: TargetName > Location > Target'tan cihaz segmenti > Unknown
+            // Location: TargetName > Location > target’tan cihaz segmenti > "Unknown"
             String location = firstNonBlank(
                     text(v, "TargetName", null),
                     text(v, "Location", null),
-                    deviceFromTarget(target),
+                    deviceFromPath(target),
                     "Unknown"
             );
 
-            // Tip: Target'ta 'Alarm'dan önceki parça > Status > TagInfo > ValueType > GENERIC
+            // Tip: path’te "Alarm"dan önceki parça > Value.Message > TagInfo > ValueType > "GENERIC"
             String type = firstNonBlank(
-                    typeFromTarget(target),
-                    text(v, "Status", null),
+                    typeFromPath(target),
+                    text(v, "Message", null),
                     text(root, "TagInfo", null),
                     text(root, "ValueType", null),
                     "GENERIC"
             );
 
-            // Mesaj: Value.Message > Target kısa özet
             String message = firstNonBlank(
                     text(v, "Message", null),
-                    shortFromTarget(target)
+                    shortFromPath(target)
             );
 
-            // Seviye: Priority yoksa INFO; varsa eşiklere göre
+            // 8+=CRITICAL, 4+=WARN, aksi INFO
             int pr = v.has("Priority") && v.path("Priority").isNumber() ? v.path("Priority").asInt() : 0;
             String level = toLevel(pr);
 
-            // ID: Target@ts
-            String id = (target == null || target.isBlank() ? "alarm" : target) + "@" + ts;
+            // ARRIVAL time + tekilleştirme
+            Instant now = Instant.now();
+            String id = (target.isBlank() ? "alarm" : target) + "@" + now;
 
-            return new AlarmEvent(id, level, type, location, message, ts);
+            return new AlarmEvent(id, level, type, location, message, now);
         } catch (Exception ex) {
             Instant now = Instant.now();
             return new AlarmEvent(
@@ -82,16 +91,15 @@ public class MqttAlarmMapper {
         }
     }
 
-    // -------- yardımcılar --------
+    // ---------- helpers ----------
     private static String toLevel(int p) {
         if (p >= 8) return "CRITICAL";
         if (p >= 4) return "WARN";
         return "INFO";
     }
 
-    private static Instant parseInstant(String iso) {
-        if (iso == null || iso.isBlank()) return null;
-        try { return Instant.parse(iso); } catch (Exception ignored) { return null; }
+    private static String normalize(String s) {
+        return (s == null ? "" : s).replace('\\','/').toUpperCase();
     }
 
     private static String text(JsonNode node, String field, String def) {
@@ -108,26 +116,26 @@ public class MqttAlarmMapper {
         return null;
     }
 
-    private static String[] splitTarget(String t) {
+    private static String[] splitPath(String t) {
         return (t == null ? "" : t).replace('\\','/').split("/");
     }
 
-    private static String typeFromTarget(String t) {
-        String[] p = splitTarget(t);
+    private static String typeFromPath(String t) {
+        String[] p = splitPath(t);
         if (p.length >= 2) return p[p.length - 2];
         if (p.length >= 1) return p[p.length - 1];
         return null;
     }
 
-    private static String deviceFromTarget(String t) {
-        String[] p = splitTarget(t);
+    private static String deviceFromPath(String t) {
+        String[] p = splitPath(t);
         if (p.length >= 3) return p[p.length - 3];
         if (p.length >= 2) return p[p.length - 2];
         return null;
     }
 
-    private static String shortFromTarget(String t) {
-        String[] p = splitTarget(t);
+    private static String shortFromPath(String t) {
+        String[] p = splitPath(t);
         int n = p.length;
         if (n >= 3) return p[n - 3] + "/" + p[n - 2] + "/" + p[n - 1];
         if (n >= 2) return p[n - 2] + "/" + p[n - 1];

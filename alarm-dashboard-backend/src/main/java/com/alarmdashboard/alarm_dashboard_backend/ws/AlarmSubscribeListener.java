@@ -1,6 +1,7 @@
 package com.alarmdashboard.alarm_dashboard_backend.ws;
 
 import com.alarmdashboard.alarm_dashboard_backend.model.AlarmEntity;
+import com.alarmdashboard.alarm_dashboard_backend.model.AlarmEvent;
 import com.alarmdashboard.alarm_dashboard_backend.repository.AlarmRepository;
 import org.springframework.context.ApplicationListener;
 import org.springframework.messaging.MessageHeaders;
@@ -31,15 +32,48 @@ public class AlarmSubscribeListener implements ApplicationListener<SessionSubscr
         if (!"/topic/alarms".equals(acc.getDestination())) return;
 
         String sessionId = acc.getSessionId();
+
+        // Son 10 dakika
         Instant since = Instant.now().minus(Duration.ofMinutes(10));
         List<AlarmEntity> recent = repo.findSince(since);
 
-        SimpMessageHeaderAccessor headers = SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE);
-        headers.setSessionId(sessionId);
-        headers.setLeaveMutable(true);
-        MessageHeaders h = headers.getMessageHeaders();
+        // Entity -> Event (frontend şeması)
+        List<AlarmEvent> payload = recent.stream()
+                .map(this::toEvent)
+                .toList();
 
-        // yalnızca o oturuma tek seferlik "ilk paket"
-        messaging.convertAndSendToUser(sessionId, "/queue/alarms-bootstrap", recent, h);
+        // Yalnızca bu WS oturumuna gönder
+        messaging.convertAndSendToUser(
+                sessionId,
+                "/queue/alarms-bootstrap",
+                payload,
+                headersForSession(sessionId)
+        );
+    }
+
+    private MessageHeaders headersForSession(String sessionId) {
+        var h = SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE);
+        h.setSessionId(sessionId);
+        h.setLeaveMutable(true);
+        return h.getMessageHeaders();
+    }
+
+    private AlarmEvent toEvent(AlarmEntity e) {
+        String level    = nz(e.getLevel(), "INFO");
+        String type     = nz(e.getType(),  "INFO");
+        String location = nz(e.getLocation(), "Unknown");
+        String message  = nz(e.getMessage(), "");
+
+        Instant ts = (e.getCreatedAt() != null ? e.getCreatedAt() : Instant.now());
+        String id  = nz(e.getId(), null);
+        if (id == null || id.isBlank()) {
+            String target = nz(e.getTarget(), "alarm");
+            id = target + "@" + ts;
+        }
+        return new AlarmEvent(id, level, type, location, message, ts);
+    }
+
+    private static String nz(String v, String def) {
+        return (v == null || v.isBlank()) ? def : v;
     }
 }

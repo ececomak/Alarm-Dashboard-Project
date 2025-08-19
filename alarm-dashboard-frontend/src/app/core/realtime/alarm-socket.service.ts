@@ -21,21 +21,19 @@ export class AlarmSocketService {
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
-      // Tanı kolaylığı için debug açık
       debug: (msg) => console.log('[STOMP]', msg),
     });
 
     this.client.onConnect = () => {
       this.bootstrapped = true;
 
-      // 1) Bootstrap listesi (sadece bu oturuma)
+      // 1) Bootstrap listesi 
       this.client!.subscribe('/user/queue/alarms-bootstrap', (msg: IMessage) => {
         try {
           const rawList = JSON.parse(msg.body) as any[];
           const nowIso = new Date().toISOString();
           const list: AlarmEvent[] = rawList.map(r => {
             const ev = this.normalize(r);
-            // geldiği an öncelikli
             ev.arrivedAt = ev.arrivedAt ?? ev.createdAt ?? nowIso;
             return ev;
           });
@@ -45,12 +43,18 @@ export class AlarmSocketService {
         }
       });
 
-      // 2) CANLI: tek tek olaylar
+      // 2) CANLI: 
       this.client!.subscribe('/topic/alarms', (msg: IMessage) => {
         try {
           const raw = JSON.parse(msg.body);
           const ev = this.normalize(raw);
-          ev.arrivedAt = new Date().toISOString();  // canlı geliş anı
+
+          const nowIso = new Date().toISOString();
+          ev.arrivedAt = nowIso;
+
+          // aynı alarm tekrar gelse de yeni id
+          ev.id = `${ev.id}#${nowIso}`;
+
           this.store.push(ev);
         } catch (e) {
           console.error('[WS] live parse error', e);
@@ -71,13 +75,12 @@ export class AlarmSocketService {
     this.bootstrapped = false;
   }
 
-  /** Backend’ten geleni tek tipe indirger */
+  /** Backend’ten geleni tek tipe indirgeme */
   private normalize(e: any): AlarmEvent {
     const level = String(e.level || '').toUpperCase().replace('WARNING', 'WARN');
     const ts = new Date(e.timestamp ?? e.time ?? e.ts);
     const timestamp = isNaN(ts.getTime()) ? new Date().toISOString() : ts.toISOString();
 
-    
     return {
       id: e.id ?? `${e.target ?? 'alarm'}@${timestamp}`,
       timestamp,

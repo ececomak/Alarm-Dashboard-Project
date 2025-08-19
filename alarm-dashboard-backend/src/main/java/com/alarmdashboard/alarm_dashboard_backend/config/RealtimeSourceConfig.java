@@ -46,27 +46,26 @@ public class RealtimeSourceConfig {
         if (props.username() != null && !props.username().isBlank()) opts.setUserName(props.username());
         if (props.password() != null && !props.password().isBlank()) opts.setPassword(props.password().toCharArray());
 
-        // Bağlantı dayanıklılığı
         opts.setAutomaticReconnect(true);
-        opts.setKeepAliveInterval(Optional.ofNullable(props.keepAlive()).orElse(30));        // sn
-        opts.setConnectionTimeout(Optional.ofNullable(props.connectionTimeout()).orElse(10));// sn
-        opts.setCleanSession(Optional.ofNullable(props.cleanSession()).orElse(true));        // QoS1 offline almak istiyorsan false
+        opts.setKeepAliveInterval(Optional.ofNullable(props.keepAlive()).orElse(30));
+        opts.setConnectionTimeout(Optional.ofNullable(props.connectionTimeout()).orElse(10));
+        opts.setCleanSession(Optional.ofNullable(props.cleanSession()).orElse(false)); // offline almak için
 
         f.setConnectionOptions(opts);
         return f;
     }
 
-    // MQTT mesajlarının düşeceği kanal
     @Bean
     public MessageChannel mqttInputChannel() {
         return new DirectChannel();
     }
 
-    // Inbound adapter: MQTT -> Channel
     @Bean
-    public MqttPahoMessageDrivenChannelAdapter mqttInboundAdapter(MqttProps props,
-                                                                  MqttPahoClientFactory factory,
-                                                                  MessageChannel mqttInputChannel) {
+    public MqttPahoMessageDrivenChannelAdapter mqttInboundAdapter(
+            MqttProps props,
+            MqttPahoClientFactory factory,
+            MessageChannel mqttInputChannel) {
+
         int qos = Optional.ofNullable(props.qos()).orElse(0);
         String[] topics = Optional.ofNullable(props.topics()).orElse("#").replace(" ", "").split(",");
 
@@ -74,7 +73,7 @@ public class RealtimeSourceConfig {
                 new MqttPahoMessageDrivenChannelAdapter(props.clientId(), factory, topics);
 
         DefaultPahoMessageConverter converter = new DefaultPahoMessageConverter();
-        converter.setPayloadAsBytes(false);    // String payload almak için
+        converter.setPayloadAsBytes(false);
         adapter.setConverter(converter);
         adapter.setQos(qos);
         adapter.setOutputChannel(mqttInputChannel);
@@ -83,7 +82,6 @@ public class RealtimeSourceConfig {
         return adapter;
     }
 
-    // Kanalı tüketen handler: filtrele -> map et -> ingest (DB + WS)
     @Bean
     @ServiceActivator(inputChannel = "mqttInputChannel")
     public MessageHandler mqttInboundHandler(MqttAlarmMapper mapper,
@@ -94,17 +92,17 @@ public class RealtimeSourceConfig {
 
             log.info("MQTT <= [{}] {}", topic, payload);
 
-            if (mapper.isAlarmLike(payload)) {
-                AlarmEvent evt = mapper.toEvent(payload); // AlarmEvent.timestamp dolu
-                ingestService.ingest(evt);               // DB'ye kaydet + WS'ye yayınla
-                log.debug("ALARM <= [{}] {}", topic, evt);
-            } else {
+            if (!mapper.isAlarmLike(payload, topic)) {
                 log.trace("DROP  <= [{}] {}", topic, payload);
+                return;
             }
+
+            AlarmEvent evt = mapper.toEvent(payload, topic); // timestamp = now (arrival)
+            ingestService.ingest(evt);
+            log.debug("ALARM <= [{}] {}", topic, evt);
         };
     }
 
-    // mqtt.* için properties holder (opsiyonel gelişmiş alanlar eklendi)
     @ConfigurationProperties(prefix = "mqtt")
     public record MqttProps(
             String brokerUrl,
@@ -113,9 +111,9 @@ public class RealtimeSourceConfig {
             Integer qos,
             String username,
             String password,
-            Boolean cleanSession,        // QoS1 offline için false yap
-            Integer keepAlive,           // sn
-            Integer connectionTimeout,   // sn
-            Long recoveryIntervalMs      // ms
+            Boolean cleanSession,
+            Integer keepAlive,
+            Integer connectionTimeout,
+            Long recoveryIntervalMs
     ) {}
 }
