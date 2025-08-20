@@ -10,6 +10,9 @@ export class AlarmStoreService {
   private persistMax = 10000;
   private storage: Storage = localStorage;
 
+  // ID tekilleme için hafif set
+  private seenIds: Set<string> = new Set();
+
   // --- live (10m) ---
   private recent10mSub = new BehaviorSubject<AlarmEvent[]>([]);
   recent$ = this.recent10mSub.asObservable();
@@ -72,6 +75,8 @@ export class AlarmStoreService {
       if (raw) {
         const arr = JSON.parse(raw) as AlarmEvent[];
         this.buffer = this.pruneBuffer(this.sortDesc(arr));
+        // seenIds'i geçmiş buffer'dan doldur
+        for (const e of this.buffer) if (e.id) this.seenIds.add(e.id);
         this.recomputeDerived();
       }
     } catch {}
@@ -81,18 +86,36 @@ export class AlarmStoreService {
 
   hydrate(events: AlarmEvent[]) {
     const nowIso = new Date().toISOString();
-    const withArrived = events.map(e => ({ ...e, arrivedAt: e.arrivedAt ?? e.createdAt ?? nowIso }));
-    const merged = this.mergeById([...withArrived, ...this.buffer]);
-    this.buffer = this.pruneBuffer(merged);
+
+    // arrivedAt fallback: arrivedAt -> createdAt -> timestamp -> now
+    const normalized = events.map(e => {
+      const arrived = e.arrivedAt ?? e.createdAt ?? e.timestamp ?? nowIso;
+      return { ...e, arrivedAt: arrived } as AlarmEvent;
+    });
+
+    // ID'ye göre tekille (yeni gelenlerden daha önce görülenleri at)
+    const incoming = normalized.filter(e => {
+      if (!e.id) return true;
+      if (this.seenIds.has(e.id)) return false;
+      this.seenIds.add(e.id);
+      return true;
+    });
+
+    // Yeni (unique) + mevcut buffer -> sırala, kırp, türevleri hesapla
+    this.buffer = this.pruneBuffer(this.sortDesc([...incoming, ...this.buffer]));
     this.recomputeDerived();
     this.persist();
   }
 
   push(event: AlarmEvent) {
     // duplicate koruması
-    if (this.buffer.find(e => e.id === event.id)) return;
+    if (event.id) {
+      if (this.seenIds.has(event.id)) return;
+      this.seenIds.add(event.id);
+    }
 
     if (!event.arrivedAt) event.arrivedAt = new Date().toISOString();
+
     this.buffer.unshift(event);
     this.buffer = this.pruneBuffer(this.buffer);
     this.recomputeDerived();
@@ -101,7 +124,7 @@ export class AlarmStoreService {
 
   // ---------- yardımcılar ----------
 
-  /** BÜTÜN hesaplamalarda bu zamanı kullanıyoruz */
+  /** BÜTÜN hesaplamalarda bu zamanı kullan */
   private getArrivedMs(e: AlarmEvent): number {
     return new Date(e.arrivedAt ?? e.createdAt ?? e.timestamp).getTime();
   }
@@ -280,11 +303,5 @@ export class AlarmStoreService {
 
   private sortDesc(list: AlarmEvent[]) {
     return [...list].sort((a, b) => this.getArrivedMs(b) - this.getArrivedMs(a));
-  }
-
-  private mergeById(list: AlarmEvent[]) {
-    const map = new Map<string, AlarmEvent>();
-    for (const e of list) map.set(e.id, e);
-    return this.sortDesc(Array.from(map.values()));
   }
 }

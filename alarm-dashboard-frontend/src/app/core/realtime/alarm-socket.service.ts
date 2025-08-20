@@ -27,34 +27,20 @@ export class AlarmSocketService {
     this.client.onConnect = () => {
       this.bootstrapped = true;
 
-      // 1) Bootstrap listesi 
-      this.client!.subscribe('/user/queue/alarms-bootstrap', (msg: IMessage) => {
-        try {
-          const rawList = JSON.parse(msg.body) as any[];
-          const nowIso = new Date().toISOString();
-          const list: AlarmEvent[] = rawList.map(r => {
-            const ev = this.normalize(r);
-            ev.arrivedAt = ev.arrivedAt ?? ev.createdAt ?? nowIso;
-            return ev;
-          });
-          this.store.hydrate(list);
-        } catch (e) {
-          console.error('[WS] bootstrap parse error', e);
-        }
-      });
+      // Bootstrap kapalı: ilk liste HTTP snapshot ile gelecek.
+      // this.client!.subscribe('/user/queue/alarms-bootstrap', ...);
 
-      // 2) CANLI: 
+      // CANLI
       this.client!.subscribe('/topic/alarms', (msg: IMessage) => {
         try {
           const raw = JSON.parse(msg.body);
           const ev = this.normalize(raw);
 
           const nowIso = new Date().toISOString();
-          ev.arrivedAt = nowIso;
+          // arrivedAt fallback zinciri: arrivedAt -> createdAt -> timestamp -> now
+          ev.arrivedAt = ev.arrivedAt ?? ev.createdAt ?? ev.timestamp ?? nowIso;
 
-          // aynı alarm tekrar gelse de yeni id
-          ev.id = `${ev.id}#${nowIso}`;
-
+          // ID'ye dokunmuyoruz
           this.store.push(ev);
         } catch (e) {
           console.error('[WS] live parse error', e);
