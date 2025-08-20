@@ -41,8 +41,8 @@
       <span class="badge">{{ (totalActive$ | async) ?? 0 }}</span>
     </div>
 
-    <table class="table live" *ngIf="(recent$ | async) as recent; else empty">
-      <colgroup><col><col><col><col></colgroup>
+
+    <table class="table" *ngIf="(recent$ | async) as recent; else empty">
       <thead>
         <tr>
           <th>Time</th><th>Location</th><th>Level</th><th>Message</th>
@@ -60,13 +60,14 @@
             <span [ngClass]="{
               'text-danger': e.level === 'CRITICAL',
               'text-warning': e.level === 'WARN',
-              'text-info':    e.level === 'INFO'
+              'text-info': e.level === 'INFO'
             }">{{ e.level }}</span>
           </td>
           <td>{{ e.message }}</td>
         </tr>
       </tbody>
     </table>
+    
     <ng-template #empty><em>Bağlantı bekleniyor…</em></ng-template>
   </nb-card-body>
 </nb-card>

@@ -16,7 +16,7 @@ export class AlarmSocketService {
     if (this.bootstrapped && this.client?.active) return;
 
     this.client = new Client({
-      webSocketFactory: () => new (SockJS as any)('/ws'),
+      webSocketFactory: () => new (SockJS as any)('http://localhost:8080/ws'),
       reconnectDelay: 5000,
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       heartbeatIncoming: 10000,
