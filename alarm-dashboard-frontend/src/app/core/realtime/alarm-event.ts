@@ -5,12 +5,12 @@ export interface AlarmEvent {
   location: string;
   message: string;
 
-  /** Olayın payload’daki orijinal zamanı (bilgi amaçlı) */
-  timestamp: string; // ISO-8601
+  timestamp: string;   // ISO-8601 (payload)
+  arrivedAt?: string;  // ISO-8601 (UI pencereleri bunu kullanır)
+  createdAt?: string;  // ISO-8601
 
-  /** MESAJIN EKRANA ULAŞTIĞI AN — bütün grafik ve pencereler bunu kullanacak */
-  arrivedAt?: string; // ISO-8601
-
-  /** (opsiyonel) backend/DB tarafından set ediliyorsa gelebilir */
-  createdAt?: string; // ISO-8601
+  // UI için türetilmiş (path'ten çıkarılır)
+  system?: string;     // EmergencyCall / LVMV / Lighting ...
+  device?: string;     // Call / CircuitBreaker / LightLevel ...
+  point?: string;      // T1RC3 / AKMADPQ1 ...
 }

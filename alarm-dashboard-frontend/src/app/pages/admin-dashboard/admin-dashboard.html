@@ -20,31 +20,46 @@
       </span>
     </div>
 
-    <table class="table" *ngIf="(recent$ | async) as recent; else empty">
-      <thead>
-        <tr>
-          <th>Time</th><th>Location</th><th>Level</th><th>Message</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let e of recent | slice:0:5">
-          <td>
-            <span title="event: {{ e.timestamp | date:'short' }}">
-            {{ (e.arrivedAt || e.createdAt || e.timestamp) | date:'short' }}
-            </span>
-          </td>
-          <td>{{ e.location }}</td>
-          <td>
-            <span [ngClass]="{
-              'text-danger': e.level === 'CRITICAL',
-              'text-warning': e.level === 'WARN',
-              'text-info': e.level === 'INFO'
-            }">{{ e.level }}</span>
-          </td>
-          <td>{{ e.message }}</td>
-        </tr>
-      </tbody>
-    </table>
+<table class="table live" *ngIf="(recent$ | async) as recent; else empty">
+  <colgroup>
+    <col style="width:16%">
+    <col style="width:14%">
+    <col style="width:18%">
+    <col style="width:30%">
+    <col style="width:10%">
+    <col style="width:12%">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>Time</th>
+      <th>System</th>
+      <th>Point</th>
+      <th>Location</th>
+      <th>Level</th>
+      <th>Message</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let e of recent | slice:0:5">
+      <td>
+        <span title="event: {{ e.timestamp | date:'short' }}">
+          {{ (e.arrivedAt || e.createdAt || e.timestamp) | date:'short' }}
+        </span>
+      </td>
+      <td class="truncate" [title]="e.system || '—'">{{ e.system || '—' }}</td>
+      <td class="truncate" [title]="e.point || e.device || '—'">{{ e.point || e.device || '—' }}</td>
+      <td class="truncate" [title]="e.location">{{ e.location }}</td>
+      <td>
+        <span [ngClass]="{
+          'text-danger': e.level === 'CRITICAL',
+          'text-warning': e.level === 'WARN',
+          'text-info': e.level === 'INFO'
+        }">{{ e.level }}</span>
+      </td>
+      <td class="truncate" [title]="e.message">{{ e.message }}</td>
+    </tr>
+  </tbody>
+</table>
 
     <ng-template #empty>
       <em>Bağlantı bekleniyor…</em>

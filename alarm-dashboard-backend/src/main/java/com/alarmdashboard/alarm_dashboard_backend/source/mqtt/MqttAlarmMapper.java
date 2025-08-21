@@ -37,7 +37,7 @@ public class MqttAlarmMapper {
 
     /**
      * JSON -> AlarmEvent
-     * createdAt (AlarmEvent.timestamp) = NOW (ARRIVAL) — UI tüm analizlerde arrivedAt/createdAt’i kullanıyor.
+     * createdAt (AlarmEvent.timestamp) = NOW (ARRIVAL) — UI arrivedAt/createdAt’i kullanıyor.
      */
 
     public AlarmEvent toEvent(String json, String mqttTopic) {
@@ -49,11 +49,11 @@ public class MqttAlarmMapper {
             String target = firstNonBlank(text(root, "Target", null), mqttTopic, "UNKNOWN/Alarm");
             target = normalize(target);
 
-            // Location: TargetName > Location > target’tan cihaz segmenti > "Unknown"
+            // Location: Location > cihaz (path) > TargetName > "Unknown"
             String location = firstNonBlank(
-                    text(v, "TargetName", null),
                     text(v, "Location", null),
                     deviceFromPath(target),
+                    text(v, "TargetName", null),
                     "Unknown"
             );
 

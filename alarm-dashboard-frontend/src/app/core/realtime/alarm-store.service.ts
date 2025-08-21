@@ -1,14 +1,18 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { Injectable, OnDestroy } from '@angular/core';
+import { BehaviorSubject, Subscription, timer } from 'rxjs';
 import { AlarmEvent } from './alarm-event';
 
 @Injectable({ providedIn: 'root' })
-export class AlarmStoreService {
+export class AlarmStoreService implements OnDestroy {
   private buffer: AlarmEvent[] = [];
   private bufferWindowMs = 35 * 24 * 60 * 60 * 1000; // 35 gün
   private persistKey = 'alarm-buffer-v1';
   private persistMax = 10000;
   private storage: Storage = localStorage;
+
+  // periyodik yeniden hesaplama (10 dk penceresi için)
+  private recalcEveryMs = 5000; // 5 sn
+  private clockSub?: Subscription;
 
   // ID tekilleme için hafif set
   private seenIds: Set<string> = new Set();
@@ -80,6 +84,14 @@ export class AlarmStoreService {
         this.recomputeDerived();
       }
     } catch {}
+
+    // >>> YENİ: Son 10 dk penceresini zaman geçtikçe otomatik güncelle
+    this.clockSub = timer(this.recalcEveryMs, this.recalcEveryMs)
+      .subscribe(() => this.recomputeDerived());
+  }
+
+  ngOnDestroy(): void {
+    this.clockSub?.unsubscribe();
   }
 
   // --------- PUBLIC API ---------

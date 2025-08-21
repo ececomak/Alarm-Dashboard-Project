@@ -1,39 +1,23 @@
 h2 { margin-bottom: 1rem; }
 
-.grid {
-  display: grid;
-  gap: 1rem;
-  margin-top: 1rem;
-}
+/* layout */
+.grid { display: grid; gap: 1.25rem; margin-top: 1rem; }
+.kpis, .charts-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
 
-.kpis {
-  grid-template-columns: repeat(2, minmax(0,1fr));
-}
-
-.charts-2 {
-  grid-template-columns: repeat(2, minmax(0,1fr));
-}
-
-.stat h2 {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-}
-
+/* charts */
 .echart { width: 100%; height: 320px; }
 .echart.small { height: 240px; }
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-.table th, .table td {
-  padding: .5rem .75rem;
-  border-bottom: 1px solid rgba(0,0,0,.06);
-}
+/* tables */
+.table { width: 100%; border-collapse: collapse; font-size: 14px; table-layout: fixed; }
+.table th, .table td { padding: .75rem 1rem; border-bottom: 1px solid rgba(0,0,0,.06); line-height: 1.4; }
 .table thead th { font-weight: 600; }
+.truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* badges */
+.chip { background: #eef; color: #1f2937; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; margin-left: 8px; }
+
+/* responsive */
 @media (max-width: 992px) {
   .kpis, .charts-2 { grid-template-columns: 1fr; }
 }

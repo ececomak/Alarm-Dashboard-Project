@@ -67,14 +67,31 @@ export class AlarmSocketService {
     const ts = new Date(e.timestamp ?? e.time ?? e.ts);
     const timestamp = isNaN(ts.getTime()) ? new Date().toISOString() : ts.toISOString();
 
+    // id "<ETP/...>@<time>" ise base path'i al; yoksa e.target
+    const base = typeof e.id === 'string' && e.id.includes('@')
+      ? e.id.split('@')[0]
+      : (e.target ?? '');
+
+    const parts = String(base).split('/').filter(Boolean); // [ETP,System,Device,Point,...]
+    const system = parts[1];
+    const device = parts[2];
+    const point  = parts[3];
+
+    // location: "Karakısık 1", "T2" gibi kısa isim varsa onu kullan
+    const locCandidate = e.location ?? e.targetName;
+    const location = (typeof locCandidate === 'string' && !locCandidate.includes('/'))
+      ? locCandidate
+      : (point || device || 'Unknown');
+
     return {
-      id: e.id ?? `${e.target ?? 'alarm'}@${timestamp}`,
+      id: e.id ?? `${base || 'alarm'}@${timestamp}`,
       timestamp,
-      location: e.location ?? e.targetName ?? 'Unknown',
+      location,
       level: (level === 'CRITICAL' || level === 'WARN' || level === 'INFO') ? level : 'INFO',
       type: e.type ?? 'INFO',
       message: e.message ?? e.text ?? '',
-      createdAt: e.createdAt
+      createdAt: e.createdAt,
+      system, device, point
     } as AlarmEvent;
   }
 }
