@@ -1,11 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { AlarmHistoryService, AlarmRowDTO } from '../../core/realtime/alarm-history.service';
 
 type Row = {
-  id: number;
+  idx: number;                 // görüntü için sıra no
   device: string;
   severity: 'Critical' | 'Warning' | 'Info';
   message: string;
-  time: string;
+  time: string;                // localized kısa format
 };
 
 @Component({
@@ -14,19 +15,8 @@ type Row = {
   templateUrl: './tables.html',
   styleUrls: ['./tables.css'],
 })
-export class TablesComponent {
-  rows: Row[] = [
-    { id: 101, device: 'Tunnel-1', severity: 'Critical', message: 'Overheat', time: '09:12' },
-    { id: 102, device: 'Gateway-2', severity: 'Warning', message: 'Packet loss', time: '08:47' },
-    { id: 103, device: 'Pump-4', severity: 'Info', message: 'Maintenance due', time: 'Yesterday' },
-    { id: 104, device: 'Tunnel-3', severity: 'Warning', message: 'Voltage drop', time: '07:20' },
-    { id: 105, device: 'Sensor-7', severity: 'Critical', message: 'No signal', time: '06:55' },
-    { id: 106, device: 'Node-5', severity: 'Info', message: 'Rebooted', time: 'Mon' },
-    { id: 107, device: 'Bridge-1', severity: 'Warning', message: 'Delay high', time: 'Sun' },
-    { id: 108, device: 'Camera-9', severity: 'Info', message: 'Firmware ok', time: 'Sat' },
-    { id: 109, device: 'Fan-2', severity: 'Critical', message: 'Stopped', time: 'Fri' },
-    { id: 110, device: 'Valve-6', severity: 'Warning', message: 'Pressure low', time: 'Thu' },
-  ];
+export class TablesComponent implements OnInit {
+  rows: Row[] = [];
 
   q = '';
   sortKey: keyof Row | '' = '';
@@ -35,12 +25,32 @@ export class TablesComponent {
   page = 1;
   pageSize = 5;
 
+  constructor(private api: AlarmHistoryService) {}
+
+  ngOnInit(): void {
+    this.load();
+  }
+
+  private load() {
+    this.api.recent(200).subscribe(list => {
+      this.rows = list.map((d, i) => ({
+        idx: i + 1,
+        device: d.device || 'Unknown',
+        severity: d.level === 'CRITICAL' ? 'Critical'
+                 : d.level === 'WARN'    ? 'Warning'
+                 : 'Info',
+        message: d.message ?? '',
+        time: new Date(d.createdAt).toLocaleString(), // istersen pipe ile formatlayabilirsin
+      }));
+    });
+  }
+
   get filtered(): Row[] {
     const q = this.q.trim().toLowerCase();
     let data = !q
       ? this.rows
       : this.rows.filter(r =>
-          [r.device, r.severity, r.message, r.time, String(r.id)]
+          [r.device, r.severity, r.message, r.time, String(r.idx)]
             .join(' ')
             .toLowerCase()
             .includes(q)

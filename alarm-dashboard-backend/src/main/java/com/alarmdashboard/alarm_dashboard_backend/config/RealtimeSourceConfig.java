@@ -46,10 +46,11 @@ public class RealtimeSourceConfig {
         if (props.username() != null && !props.username().isBlank()) opts.setUserName(props.username());
         if (props.password() != null && !props.password().isBlank()) opts.setPassword(props.password().toCharArray());
 
+        // Offline kuyruk için cleanSession=false
         opts.setAutomaticReconnect(true);
         opts.setKeepAliveInterval(Optional.ofNullable(props.keepAlive()).orElse(30));
         opts.setConnectionTimeout(Optional.ofNullable(props.connectionTimeout()).orElse(10));
-        opts.setCleanSession(Optional.ofNullable(props.cleanSession()).orElse(false)); // offline almak için
+        opts.setCleanSession(Optional.ofNullable(props.cleanSession()).orElse(false));
 
         f.setConnectionOptions(opts);
         return f;
@@ -66,7 +67,7 @@ public class RealtimeSourceConfig {
             MqttPahoClientFactory factory,
             MessageChannel mqttInputChannel) {
 
-        int qos = Optional.ofNullable(props.qos()).orElse(0);
+        int qos = Optional.ofNullable(props.qos()).orElse(1);
         String[] topics = Optional.ofNullable(props.topics()).orElse("#").replace(" ", "").split(",");
 
         MqttPahoMessageDrivenChannelAdapter adapter =
@@ -87,8 +88,27 @@ public class RealtimeSourceConfig {
     public MessageHandler mqttInboundHandler(MqttAlarmMapper mapper,
                                              AlarmIngestService ingestService) {
         return message -> {
+            // --- Header tabanlı filtreler ---
+            Boolean retained = message.getHeaders().get(MqttHeaders.RECEIVED_RETAINED, Boolean.class);
+            if (Boolean.TRUE.equals(retained)) {
+                // Eski (retained) mesaj — işleme.
+                if (log.isDebugEnabled()) {
+                    String t = String.valueOf(message.getHeaders().get(MqttHeaders.RECEIVED_TOPIC));
+                    log.debug("DROP (retained) <= [{}]", t);
+                }
+                return;
+            }
+
+            Boolean duplicate = message.getHeaders().get(MqttHeaders.DUPLICATE, Boolean.class);
+            if (Boolean.TRUE.equals(duplicate)) {
+                String t = String.valueOf(message.getHeaders().get(MqttHeaders.RECEIVED_TOPIC));
+                log.debug("DROP (duplicate) <= [{}]", t);
+                return;
+            }
+
+            // --- Normal akış ---
             String payload = String.valueOf(message.getPayload());
-            String topic = String.valueOf(message.getHeaders().get(MqttHeaders.RECEIVED_TOPIC));
+            String topic   = String.valueOf(message.getHeaders().get(MqttHeaders.RECEIVED_TOPIC));
 
             log.info("MQTT <= [{}] {}", topic, payload);
 
@@ -97,7 +117,8 @@ public class RealtimeSourceConfig {
                 return;
             }
 
-            AlarmEvent evt = mapper.toEvent(payload, topic); // timestamp = now (arrival)
+            // timestamp = now (arrival)
+            AlarmEvent evt = mapper.toEvent(payload, topic);
             ingestService.ingest(evt);
             log.debug("ALARM <= [{}] {}", topic, evt);
         };

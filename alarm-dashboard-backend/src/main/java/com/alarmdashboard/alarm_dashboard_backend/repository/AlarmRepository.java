@@ -1,6 +1,8 @@
 package com.alarmdashboard.alarm_dashboard_backend.repository;
 
 import com.alarmdashboard.alarm_dashboard_backend.model.AlarmEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,4 +17,6 @@ public interface AlarmRepository extends JpaRepository<AlarmEntity, String> {
 
     @Query("select a from AlarmEntity a where a.createdAt between :from and :to order by a.createdAt desc")
     List<AlarmEntity> findBetween(@Param("from") Instant from, @Param("to") Instant to);
+
+    Page<AlarmEntity> findAllByOrderByCreatedAtDesc(Pageable pageable);
 }

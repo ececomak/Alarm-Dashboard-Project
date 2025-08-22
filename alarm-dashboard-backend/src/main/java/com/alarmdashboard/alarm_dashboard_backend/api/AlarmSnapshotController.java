@@ -15,7 +15,7 @@ public class AlarmSnapshotController {
     private final RecentAlarmStore store;
     public AlarmSnapshotController(RecentAlarmStore store) { this.store = store; }
 
-    @GetMapping("/recent")
+    @GetMapping(value = "/recent", params = "since")
     public List<AlarmEvent> recent(@RequestParam("since")
                                    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant since) {
         return store.since(since);
