@@ -1,12 +1,12 @@
 import { Component, OnInit } from '@angular/core';
-import { AlarmHistoryService, AlarmRowDTO } from '../../core/realtime/alarm-history.service';
+import { AlarmHistoryService } from '../../core/realtime/alarm-history.service';
 
 type Row = {
-  idx: number;                 // görüntü için sıra no
+  idx: number;
   device: string;
   severity: 'Critical' | 'Warning' | 'Info';
   message: string;
-  time: string;                // localized kısa format
+  time: string;
 };
 
 @Component({
@@ -37,14 +37,15 @@ export class TablesComponent implements OnInit {
         idx: i + 1,
         device: d.device || 'Unknown',
         severity: d.level === 'CRITICAL' ? 'Critical'
-                 : d.level === 'WARN'    ? 'Warning'
-                 : 'Info',
+               : d.level === 'WARN'    ? 'Warning'
+               : 'Info',
         message: d.message ?? '',
-        time: new Date(d.createdAt).toLocaleString(), // istersen pipe ile formatlayabilirsin
+        time: new Date(d.createdAt).toLocaleString(),
       }));
     });
   }
 
+  // -------- derivations --------
   get filtered(): Row[] {
     const q = this.q.trim().toLowerCase();
     let data = !q
@@ -64,21 +65,70 @@ export class TablesComponent implements OnInit {
     return data;
   }
 
+  get totalItems(): number {
+    return this.filtered.length;
+  }
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.totalItems / this.pageSize));
+  }
+
   get paged(): Row[] {
+    if (this.page > this.totalPages) this.page = this.totalPages;
     const start = (this.page - 1) * this.pageSize;
     return this.filtered.slice(start, start + this.pageSize);
   }
 
-  pages(total = this.filtered.length): number[] {
-    const n = Math.max(1, Math.ceil(total / this.pageSize));
-    return Array.from({ length: n }, (_, i) => i + 1);
+  // -------- pager helpers --------
+  goPrev() { if (this.page > 1) this.page--; }
+  goNext() { if (this.page < this.totalPages) this.page++; }
+  goto(p: number | '…') {
+    if (p === '…') return;
+    this.page = p;
   }
 
+  onPageSizeChange(ps: number) {
+    this.pageSize = ps;
+    this.page = 1;
+  }
+
+  visiblePages(): Array<number | '…'> {
+    const total = this.totalPages;
+    const curr  = this.page;
+
+    if (total <= 9) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+
+    const set = new Set<number>();
+    set.add(1);
+    set.add(2);
+    set.add(total - 1);
+    set.add(total);
+
+    const around = 2;
+    for (let p = curr - around; p <= curr + around; p++) {
+      if (p >= 1 && p <= total) set.add(p);
+    }
+
+    const sorted = Array.from(set).sort((a, b) => a - b);
+
+    const out: Array<number | '…'> = [];
+    for (let i = 0; i < sorted.length; i++) {
+      if (i === 0) { out.push(sorted[i]); continue; }
+      const prev = sorted[i - 1];
+      const cur  = sorted[i];
+      if (cur - prev === 1) out.push(cur);
+      else out.push('…', cur);
+    }
+    return out;
+  }
+
+  // -------- UI helpers --------
   setSort(k: keyof Row) {
     if (this.sortKey === k) this.sortDir = this.sortDir === 1 ? -1 : 1;
     else { this.sortKey = k; this.sortDir = 1; }
+    this.page = 1;
   }
 
-  max(a: number, b: number) { return Math.max(a, b); }
-  min(a: number, b: number) { return Math.min(a, b); }
+  trackByIdx(_: number, r: Row) { return r.idx; }
 }

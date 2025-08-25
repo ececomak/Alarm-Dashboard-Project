@@ -12,12 +12,11 @@ import { AlarmEvent } from '../../core/realtime/alarm-event';
   standalone: false,
   templateUrl: './admin-dashboard.html',
   styleUrls: ['./admin-dashboard.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush,   // ✅
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   email = localStorage.getItem('email') || '';
 
-  // başlangıçları 0 tut
   stats = [
     { title: 'Active Alarms', value: 0, icon: 'alert-triangle-outline' },
     { title: 'Last 60 min',   value: 0, icon: 'clock-outline' },
@@ -32,6 +31,8 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
 
   totalActive$!: Observable<number>;
   recent$!: Observable<AlarmEvent[]>;
+  uptime$!: Observable<number>;
+  latest$!: Observable<AlarmEvent[]>;
 
   private trendChart?: echarts.ECharts;
   private pieChart?: echarts.ECharts;
@@ -41,7 +42,6 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
   private charts: echarts.ECharts[] = [];
   private subs: Subscription[] = [];
 
-  /** Rozet: '10m' | '1h' | '—' */
   sevPieLabel: string = '—';
 
   constructor(
@@ -52,6 +52,8 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
   ngOnInit(): void {
     this.totalActive$ = this.alarmStore.totalActive$;
     this.recent$ = this.alarmStore.recent$;
+    this.uptime$ = this.alarmStore.uptime24h$;
+    this.latest$ = this.alarmStore.latest$;
   }
 
   ngAfterViewInit(): void {
@@ -99,8 +101,8 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
       series: [{
         type: 'gauge',
         min: 0, max: 100,
-        detail: { formatter: '{value}%' },
-        data: [{ value: 97, name: 'Uptime' }],
+        detail: { formatter: (val: number) => `${(val ?? 0).toFixed(1)}%` },
+        data: [{ value: 0, name: 'Uptime' }],
       }],
     });
 
@@ -167,6 +169,14 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
             { type: 'line', smooth: true,                     symbolSize: 6, data: totals },
           ],
         });
+      })
+    );
+
+    // ---- GAUGE: Uptime (24h)
+    this.subs.push(
+      this.uptime$.subscribe(v => {
+        const val = Number.isFinite(v) ? v : 0;
+        this.gaugeChart?.setOption({ series: [{ data: [{ value: val, name: 'Uptime' }] }] });
       })
     );
   }

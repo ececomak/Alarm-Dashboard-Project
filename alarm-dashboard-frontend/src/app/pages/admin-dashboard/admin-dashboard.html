@@ -20,50 +20,36 @@
       </span>
     </div>
 
-<table class="table live" *ngIf="(recent$ | async) as recent; else empty">
-  <colgroup>
-    <col style="width:16%">
-    <col style="width:14%">
-    <col style="width:18%">
-    <col style="width:30%">
-    <col style="width:10%">
-    <col style="width:12%">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>Time</th>
-      <th>System</th>
-      <th>Point</th>
-      <th>Location</th>
-      <th>Level</th>
-      <th>Message</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr *ngFor="let e of recent | slice:0:5">
-      <td>
-        <span title="event: {{ e.timestamp | date:'short' }}">
-          {{ (e.arrivedAt || e.createdAt || e.timestamp) | date:'short' }}
-        </span>
-      </td>
-      <td class="truncate" [title]="e.system || '—'">{{ e.system || '—' }}</td>
-      <td class="truncate" [title]="e.point || e.device || '—'">{{ e.point || e.device || '—' }}</td>
-      <td class="truncate" [title]="e.location">{{ e.location }}</td>
-      <td>
-        <span [ngClass]="{
-          'text-danger': e.level === 'CRITICAL',
-          'text-warning': e.level === 'WARN',
-          'text-info': e.level === 'INFO'
-        }">{{ e.level }}</span>
-      </td>
-      <td class="truncate" [title]="e.message">{{ e.message }}</td>
-    </tr>
-  </tbody>
-</table>
+    <table class="table live" *ngIf="(recent$ | async) as recent; else empty">
+      <colgroup>
+        <col style="width:16%"><col style="width:14%"><col style="width:18%">
+        <col style="width:30%"><col style="width:10%"><col style="width:12%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Time</th><th>System</th><th>Point</th><th>Location</th><th>Level</th><th>Message</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let e of recent | slice:0:5">
+          <td><span title="event: {{ e.timestamp | date:'short' }}">
+            {{ (e.arrivedAt || e.createdAt || e.timestamp) | date:'short' }}</span></td>
+          <td class="truncate" [title]="e.system || '—'">{{ e.system || '—' }}</td>
+          <td class="truncate" [title]="e.point || e.device || '—'">{{ e.point || e.device || '—' }}</td>
+          <td class="truncate" [title]="e.location">{{ e.location }}</td>
+          <td>
+            <span [ngClass]="{
+              'text-danger': e.level === 'CRITICAL',
+              'text-warning': e.level === 'WARN',
+              'text-info': e.level === 'INFO'
+            }">{{ e.level }}</span>
+          </td>
+          <td class="truncate" [title]="e.message">{{ e.message }}</td>
+        </tr>
+      </tbody>
+    </table>
 
-    <ng-template #empty>
-      <em>Bağlantı bekleniyor…</em>
-    </ng-template>
+    <ng-template #empty><em>Bağlantı bekleniyor…</em></ng-template>
   </nb-card-body>
 </nb-card>
 
@@ -78,10 +64,7 @@
   <nb-card>
     <nb-card-header style="display:flex;justify-content:space-between;align-items:center">
       <span>Severity Distribution</span>
-      <!-- 10m doluysa 10m, boşsa 1h -->
-        <span class="chip" style="font-size:12px;padding:2px 8px;border-radius:10px;background:#eef;">
-    {{ sevPieLabel }}
-  </span>
+      <span class="chip" style="font-size:12px;padding:2px 8px;border-radius:10px;background:#eef;">{{ sevPieLabel }}</span>
     </nb-card-header>
     <nb-card-body>
       <div #pieEl class="echart"></div>
@@ -110,16 +93,21 @@
   <nb-card>
     <nb-card-header>Recent Events</nb-card-header>
     <nb-card-body>
-      <table class="table">
+      <table class="table" *ngIf="(latest$ | async) as latest; else noLatest">
         <thead>
           <tr><th>Time</th><th>Source</th><th>Message</th></tr>
         </thead>
         <tbody>
-          <tr><td>09:12</td><td>Tunnel-2</td><td>Warning acknowledged</td></tr>
-          <tr><td>08:45</td><td>Tunnel-4</td><td>Info received</td></tr>
-          <tr><td>Yesterday</td><td>Tunnel-1</td><td>Critical resolved</td></tr>
+          <tr *ngFor="let e of latest | slice:0:5">
+            <td>{{ (e.arrivedAt || e.createdAt || e.timestamp) | date:'short' }}</td>
+            <td class="truncate" [title]="e.system || e.device || e.point || '—'">
+              {{ e.system || e.device || e.point || '—' }}
+            </td>
+            <td class="truncate" [title]="e.message">{{ e.message }}</td>
+          </tr>
         </tbody>
       </table>
+      <ng-template #noLatest><em>Henüz kayıt yok.</em></ng-template>
     </nb-card-body>
   </nb-card>
 </div>

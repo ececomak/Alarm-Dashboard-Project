@@ -32,7 +32,13 @@
   display: flex;
   gap: .5rem;
   justify-content: flex-end;
+  align-items: center;
   margin-top: 1rem;
+  flex-wrap: wrap;     
+}
+.pager .ellipsis {
+  padding: 0 .4rem;
+  opacity: .6;
 }
 
 .badge {

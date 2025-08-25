@@ -1,21 +1,61 @@
-<div class="grid">
+<div class="grid" [class.compact]="compactRows">
+  <!-- Tabs -->
   <nb-card>
     <nb-card-header>Tabs</nb-card-header>
     <nb-card-body>
       <nb-tabset fullWidth>
         <nb-tab tabTitle="Overview">
-          <p nbTooltip="General summary">High level overview content.</p>
+          <div class="ovr">
+            <div class="stat">
+              <div class="k">Active</div>
+              <div class="v">{{ (totalActive$ | async) ?? 0 }}</div>
+            </div>
+            <div class="stat">
+              <div class="k">Last 60m</div>
+              <div class="v">{{ (last60m$ | async) ?? 0 }}</div>
+            </div>
+            <div class="stat">
+              <div class="k">Uptime (24h)</div>
+              <div class="v">{{ (uptime$ | async) ?? 0 }}%</div>
+            </div>
+          </div>
         </nb-tab>
+
         <nb-tab tabTitle="Details">
-          <p>Detailed stats and breakdowns go here.</p>
+          <b>By Category (1h)</b>
+          <ul class="cats" *ngIf="(cats1h$ | async) as cats; else noCats">
+            <li *ngFor="let c of cats">
+              <div class="row">
+                <span class="name">{{ c.name }}</span>
+                <span class="val">{{ c.value }}</span>
+              </div>
+              <div class="bar"><div class="fill" [style.width.%]="c.pct"></div></div>
+            </li>
+          </ul>
+          <ng-template #noCats><em>No data.</em></ng-template>
         </nb-tab>
+
         <nb-tab tabTitle="Settings">
-          <p>Configuration and preferences.</p>
+          <div class="settings">
+            <label class="srow">
+              <nb-toggle [checked]="pausedLive" (checkedChange)="togglePause()"></nb-toggle>
+              <span>Pause live feed</span>
+            </label>
+            <label class="srow">
+              <nb-checkbox [checked]="toastCritical" (checkedChange)="toggleToast()"></nb-checkbox>
+              <span>Toast on new Critical</span>
+            </label>
+            <label class="srow">
+              <nb-checkbox [checked]="compactRows" (checkedChange)="toggleCompact()"></nb-checkbox>
+              <span>Compact rows</span>
+            </label>
+          </div>
         </nb-tab>
       </nb-tabset>
     </nb-card-body>
   </nb-card>
 
+  <!-- Accordion -->
   <nb-card>
     <nb-card-header>Accordion</nb-card-header>
     <nb-card-body>
@@ -32,52 +72,103 @@
     </nb-card-body>
   </nb-card>
 
+  <!-- Alerts (Live) -->
   <nb-card class="span-2">
-    <nb-card-header>Alerts</nb-card-header>
+    <nb-card-header class="hdr">
+      <span>Alerts</span>
+      <div class="right">
+        <span class="chip live" [class.paused]="pausedLive">{{ pausedLive ? 'Paused' : 'Live 10m' }}</span>
+        <nb-toggle size="small" [checked]="pausedLive" (checkedChange)="togglePause()"></nb-toggle>
+      </div>
+    </nb-card-header>
+
     <nb-card-body class="alerts">
-      <nb-alert *ngFor="let a of alerts" [status]="a.status">
-        {{ a.text }}
-      </nb-alert>
+      <ul class="alist" *ngIf="(alerts$ | async) as list; else noAlerts">
+        <li *ngFor="let e of (list | slice:0:6)">
+          <div class="sev" [ngClass]="{
+              'crit': e.level==='CRITICAL',
+              'warn': e.level==='WARN',
+              'info': e.level==='INFO'
+            }"></div>
+
+          <div class="msg">
+            <div class="t truncate" [title]="e.message || '—'">{{ e.message || '—' }}</div>
+            <div class="m">
+              <span class="time">{{ (e.arrivedAt || e.createdAt || e.timestamp) | date:'short' }}</span>
+              <span class="dot">•</span>
+              <span class="sys" [title]="e.system || '—'">{{ e.system || '—' }}</span>
+              <span class="dot">•</span>
+              <span class="pt" [title]="e.point || e.device || '—'">{{ e.point || e.device || '—' }}</span>
+              <span class="dot">•</span>
+              <span class="lvl" [ngClass]="{
+                'text-danger': e.level==='CRITICAL',
+                'text-warning': e.level==='WARN',
+                'text-info': e.level==='INFO'
+              }">{{ e.level }}</span>
+            </div>
+          </div>
+
+          <button nbButton size="tiny" status="basic" (click)="copyRow(e)">Copy</button>
+        </li>
+      </ul>
+      <ng-template #noAlerts><em>No recent alerts.</em></ng-template>
     </nb-card-body>
   </nb-card>
 
+  <!-- Processing -->
   <nb-card>
     <nb-card-header>Processing</nb-card-header>
     <nb-card-body>
       <div class="row" style="gap:.75rem; align-items:center; margin-bottom:.5rem;">
-        <span>Alarm ingestion</span>
-        <nb-progress-bar [value]="progress" [status]="progressStatus"></nb-progress-bar>
-        <span>{{ progress }}%</span>
+        <span>Uptime (24h)</span>
+        <nb-progress-bar
+          [value]="(uptime$ | async) ?? 0"
+          [status]="uptimeStatus(uptime$ | async)">
+        </nb-progress-bar>
+        <span>{{ (uptime$ | async) ?? 0 }}%</span>
       </div>
-      <small *ngIf="progress < 100">Streaming alarms are being processed…</small>
-      <small *ngIf="progress === 100">All queued alarms processed.</small>
+
+      <div class="meta">
+        <span>Last 60m: <b>{{ (last60m$ | async) ?? 0 }}</b></span>
+        <span class="dot">•</span>
+        <span>Rate: <b>{{ (ratePerMin$ | async) ?? 0 }}</b>/min</span>
+        <span class="dot">•</span>
+        <span>Status:
+          <b [class.online]="(isStreaming$ | async)===true">
+            {{ (isStreaming$ | async) ? 'Streaming' : 'Idle' }}
+          </b>
+        </span>
+      </div>
     </nb-card-body>
   </nb-card>
 
+  <!-- Tooltips with live counts -->
   <nb-card>
-    <nb-card-header>Tooltips (Alarm Severity)</nb-card-header>
-    <nb-card-body class="tips">
+    <nb-card-header>
+      Tooltips (Alarm Severity)
+      <span class="chip small" *ngIf="(sevLabel$ | async) as lab">{{ lab }}</span>
+    </nb-card-header>
+    <nb-card-body class="tips" *ngIf="(sevCounts$ | async) as sev">
       <button nbButton status="danger"
-              nbTooltip="Immediate action required (Critical)"
-              nbTooltipPlacement="top">
+              nbTooltip="Immediate action required (Critical)" nbTooltipPlacement="top">
         <nb-icon icon="alert-triangle-outline"></nb-icon>&nbsp;Critical
+        <span class="badge">{{ sev.CRITICAL }}</span>
       </button>
 
       <button nbButton status="warning"
-              nbTooltip="Needs attention soon (Warning)"
-              nbTooltipPlacement="top">
+              nbTooltip="Needs attention soon (Warning)" nbTooltipPlacement="top">
         <nb-icon icon="flash-outline"></nb-icon>&nbsp;Warning
+        <span class="badge">{{ sev.WARN }}</span>
       </button>
 
       <button nbButton status="info"
-              nbTooltip="Informational / FYI (Info)"
-              nbTooltipPlacement="top">
+              nbTooltip="Informational / FYI (Info)" nbTooltipPlacement="top">
         <nb-icon icon="bell-outline"></nb-icon>&nbsp;Info
+        <span class="badge">{{ sev.INFO }}</span>
       </button>
 
       <button nbButton status="primary"
-              nbTooltip="Normal operation"
-              nbTooltipPlacement="top">
+              nbTooltip="Normal operation" nbTooltipPlacement="top">
         <nb-icon icon="activity-outline"></nb-icon>&nbsp;Normal
       </button>
     </nb-card-body>

@@ -9,7 +9,7 @@
       <div class="spacer"></div>
 
       <input nbInput fullWidth placeholder="Search…" [(ngModel)]="q" class="search" />
-      <nb-select size="small" [(selected)]="pageSize">
+      <nb-select size="small" [(selected)]="pageSize" (selectedChange)="onPageSizeChange($event)">
         <nb-option [value]="5">5</nb-option>
         <nb-option [value]="10">10</nb-option>
         <nb-option [value]="20">20</nb-option>
@@ -30,7 +30,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let r of paged">
+          <tr *ngFor="let r of paged; trackBy: trackByIdx">
             <td>{{ r.idx }}</td>
             <td>{{ r.device }}</td>
             <td>
@@ -42,26 +42,28 @@
         </tbody>
       </table>
     </div>
-<div class="pager">
-  <button nbButton size="small"
-          (click)="page = max(1, page - 1)"
-          [disabled]="page === 1">
-    Prev
-  </button>
 
-  <ng-container *ngFor="let p of pages()">
-    <button nbButton size="small"
-            (click)="page = p"
-            [status]="p === page ? 'primary' : 'basic'">
-      {{ p }}
-    </button>
-  </ng-container>
+    <!-- Compact pager -->
+    <div class="pager">
+      <button nbButton size="small" (click)="goPrev()" [disabled]="page === 1">
+        Prev
+      </button>
 
-  <button nbButton size="small"
-          (click)="page = min(pages().length, page + 1)"
-          [disabled]="page === pages().length">
-    Next
-  </button>
-</div>
+      <ng-container *ngFor="let p of visiblePages()">
+        <button nbButton size="small"
+                *ngIf="p !== '…'; else dots"
+                (click)="goto(p)"
+                [status]="p === page ? 'primary' : 'basic'">
+          {{ p }}
+        </button>
+        <ng-template #dots>
+          <span class="ellipsis">…</span>
+        </ng-template>
+      </ng-container>
+
+      <button nbButton size="small" (click)="goNext()" [disabled]="page === totalPages">
+        Next
+      </button>
+    </div>
   </nb-card-body>
 </nb-card>

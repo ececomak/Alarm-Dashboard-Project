@@ -10,9 +10,9 @@ h2 { margin-bottom: 1rem; }
 
 /* Recent Activity */
 .recent { list-style: none; padding: 0; margin: 0; }
-.recent li { display: flex; align-items: center; padding: .5rem 0; border-bottom: 1px solid rgba(0,0,0,.06); gap: 16px; }
+.recent li { display: flex; align-items: baseline; padding: .10px 0; border-bottom: 1px solid rgba(0,0,0,.06); gap: 14px; }
 .recent li:last-child { border-bottom: 0; }
-.recent .time { width: 90px; font-weight: 600; opacity: .7; white-space: nowrap; }
+.recent .time { width: 180px; font-weight: 700; opacity: .85; white-space: nowrap; }
 .recent .text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* badges */

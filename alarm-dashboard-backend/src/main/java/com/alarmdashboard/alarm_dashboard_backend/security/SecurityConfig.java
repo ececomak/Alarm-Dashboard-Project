@@ -53,7 +53,6 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/dev/**").permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
-                        // 🔓 Sadece okuma uçları: snapshot/istatistik için gerekli
                         .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
                         .anyRequest().authenticated()
                 );

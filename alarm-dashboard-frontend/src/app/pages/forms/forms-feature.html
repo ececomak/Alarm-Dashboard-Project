@@ -12,8 +12,7 @@
       <div class="field">
         <label>Device</label>
         <input nbInput placeholder="e.g. Tunnel-3" formControlName="device" />
-        <small class="err"
-          *ngIf="f.device.touched && f.device.errors?.['maxlength']">
+        <small class="err" *ngIf="f.device.touched && f.device.errors?.['maxlength']">
           Max 40 characters.
         </small>
       </div>
@@ -28,18 +27,20 @@
 
       <div class="field">
         <label>From</label>
-        <input nbInput type="date" formControlName="from" />
+        <input nbInput type="date" formControlName="from" [disabled]="!!f.live.value"/>
       </div>
 
       <div class="field">
         <label>To</label>
-        <input nbInput type="date" formControlName="to" />
+        <input nbInput type="date" formControlName="to" [disabled]="!!f.live.value"/>
       </div>
 
       <div class="switches">
         <label class="switch">
           <nb-toggle formControlName="live"></nb-toggle>
           <span>Live stream</span>
+          <span *ngIf="form.value.live" class="chip">10m</span>
+          <span *ngIf="!form.value.live" class="chip">35d buffer</span>
         </label>
         <label class="switch">
           <nb-checkbox formControlName="ackOnly"></nb-checkbox>
@@ -49,7 +50,8 @@
 
       <div class="actions">
         <button nbButton status="primary" type="submit">Apply Filter</button>
-        <button nbButton status="basic" type="button" (click)="form.reset({ live: true, ackOnly: false })">
+        <button nbButton status="basic" type="button"
+                (click)="form.reset({ device:'', severity:'', from:'', to:'', live:true, ackOnly:false })">
           Reset
         </button>
       </div>
@@ -58,12 +60,48 @@
 </nb-card>
 
 <nb-card *ngIf="lastSubmitted">
-  <nb-card-header>Current Filter</nb-card-header>
+  <nb-card-header style="display:flex; align-items:center; justify-content:space-between">
+    <span>Current Filter</span>
+    <span class="chip" *ngIf="coverageNote$ | async as note">{{ note }}</span>
+  </nb-card-header>
+
   <nb-card-body class="preview">
     <div><b>Device:</b> {{ lastSubmitted.device }}</div>
     <div><b>Severity:</b> {{ lastSubmitted.severity }}</div>
     <div><b>Date Range:</b> {{ lastSubmitted.from }} → {{ lastSubmitted.to }}</div>
     <div><b>Live:</b> {{ lastSubmitted.live ? 'On' : 'Off' }}</div>
     <div><b>Ack Only:</b> {{ lastSubmitted.ackOnly ? 'Yes' : 'No' }}</div>
+    <div><b>Results:</b> {{ (count$ | async) ?? 0 }}</div>
+  </nb-card-body>
+</nb-card>
+
+<!-- Küçük sonuç tablosu -->
+<nb-card *ngIf="lastSubmitted">
+  <nb-card-header>Results (top 200, newest first)</nb-card-header>
+  <nb-card-body>
+    <table class="table">
+      <colgroup>
+        <col style="width:18%"><col style="width:18%"><col style="width:18%">
+        <col style="width:10%"><col style="width:36%">
+      </colgroup>
+      <thead>
+        <tr><th>Time</th><th>System</th><th>Point</th><th>Level</th><th>Message</th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let e of (results$ | async) ?? []">
+          <td>{{ (e.arrivedAt || e.createdAt || e.timestamp) | date:'short' }}</td>
+          <td class="truncate" [title]="e.system || '—'">{{ e.system || '—' }}</td>
+          <td class="truncate" [title]="e.point || e.device || '—'">{{ e.point || e.device || '—' }}</td>
+          <td>
+            <span [ngClass]="{
+              'text-danger': (e.level||'').toUpperCase()==='CRITICAL',
+              'text-warning': (e.level||'').toUpperCase()==='WARN',
+              'text-info': (e.level||'').toUpperCase()==='INFO'
+            }">{{ e.level }}</span>
+          </td>
+          <td class="truncate" [title]="e.message">{{ e.message }}</td>
+        </tr>
+      </tbody>
+    </table>
   </nb-card-body>
 </nb-card>

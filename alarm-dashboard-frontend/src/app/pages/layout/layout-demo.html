@@ -1,33 +1,129 @@
 <div class="grid">
+  <!-- KPIs -->
   <nb-card *ngFor="let k of kpis" class="kpi">
     <nb-card-body>
       <div class="kpi-wrap">
         <nb-icon [icon]="k.icon" [status]="k.status"></nb-icon>
         <div class="kpi-meta">
           <div class="kpi-title">{{ k.title }}</div>
-          <div class="kpi-value">{{ k.value }}</div>
+          <div class="kpi-value">{{ (k.value$ | async) ?? 0 }}</div>
         </div>
       </div>
     </nb-card-body>
   </nb-card>
 
+  <!-- Two Columns -->
   <nb-card class="span-2">
     <nb-card-header>Two Columns</nb-card-header>
     <nb-card-body>
       <div class="cols cols-2">
-        <div class="box"><b>Left</b><br/>Responsive content area.</div>
-        <div class="box"><b>Right</b><br/>Use for details or logs.</div>
+        <!-- LEFT: Live (son 10 dk, ilk 5) -->
+        <div class="box">
+          <b>Live Alarms (10m)</b>
+          <table class="table live" *ngIf="(recent$ | async) as recent; else noLive">
+            <colgroup>
+              <col style="width:18%">
+              <col style="width:16%">
+              <col style="width:18%">
+              <col style="width:8%">
+              <col style="width:40%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>System</th>
+                <th>Point</th>
+                <th>Level</th>
+                <th>Message</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let e of (recent | slice:0:5)">
+                <td>{{ (e.arrivedAt || e.createdAt || e.timestamp) | date:'short' }}</td>
+                <td class="truncate" [title]="e.system || '—'">{{ e.system || '—' }}</td>
+                <td class="truncate" [title]="e.point || e.device || '—'">{{ e.point || e.device || '—' }}</td>
+                <td>
+                  <span [ngClass]="{
+                    'text-danger': e.level === 'CRITICAL',
+                    'text-warning': e.level === 'WARN',
+                    'text-info': e.level === 'INFO'
+                  }">{{ e.level }}</span>
+                </td>
+                <td class="truncate" [title]="e.message">{{ e.message }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <ng-template #noLive><em>Şimdilik kayıt yok.</em></ng-template>
+        </div>
+
+        <!-- RIGHT: By Category (10m→1h) -->
+        <div class="box">
+          <div class="box-head">
+            <b>By Category</b>
+            <span class="chip">{{ (categoryLabel$ | async) }}</span>
+          </div>
+
+          <ul class="cats" *ngIf="(categories$ | async) as cats; else noCat">
+            <li *ngFor="let c of cats">
+              <div class="row">
+                <span class="name">{{ c.name }}</span>
+                <span class="val">{{ c.value }}</span>
+              </div>
+              <div class="bar"><div class="fill" [style.width.%]="c.pct"></div></div>
+            </li>
+          </ul>
+          <ng-template #noCat><em>Veri yok.</em></ng-template>
+        </div>
       </div>
     </nb-card-body>
   </nb-card>
 
+  <!-- Three Columns -->
   <nb-card class="span-2">
     <nb-card-header>Three Columns</nb-card-header>
     <nb-card-body>
       <div class="cols cols-3">
-        <div class="box">Column A</div>
-        <div class="box">Column B</div>
-        <div class="box">Column C</div>
+        <!-- A: 12h mini bars -->
+        <div class="box">
+          <b>Hourly Activity (12h)</b>
+          <ul class="mini">
+            <li *ngFor="let h of (hourlyMini$ | async) ?? []">
+              <span class="lb">{{ h.label }}</span>
+              <div class="mini-bar"><div class="fill" [style.width.%]="h.pct"></div></div>
+              <span class="ct">{{ h.count }}</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- B: Top Systems (10m) -->
+        <div class="box">
+          <div class="box-head">
+            <b>Top Systems</b>
+            <span class="chip">10m</span>
+          </div>
+          <ul class="cats" *ngIf="(topSystems$ | async) as tops; else noTop">
+            <li *ngFor="let t of tops">
+              <div class="row">
+                <span class="name">{{ t.name }}</span>
+                <span class="val">{{ t.value }}</span>
+              </div>
+              <div class="bar"><div class="fill" [style.width.%]="t.pct"></div></div>
+            </li>
+          </ul>
+          <ng-template #noTop><em>Veri yok.</em></ng-template>
+        </div>
+
+        <!-- C: Last 10 Events -->
+        <div class="box">
+          <b>Last 10 Events</b>
+          <ul class="events" *ngIf="(latest$ | async) as latest; else noLatest">
+            <li *ngFor="let e of latest | slice:0:10">
+              <span class="t">{{ (e.arrivedAt || e.createdAt || e.timestamp) | date:'short' }}</span>
+              <span class="m truncate" [title]="e.message">{{ e.message }}</span>
+            </li>
+          </ul>
+          <ng-template #noLatest><em>Henüz etkinlik yok.</em></ng-template>
+        </div>
       </div>
     </nb-card-body>
   </nb-card>

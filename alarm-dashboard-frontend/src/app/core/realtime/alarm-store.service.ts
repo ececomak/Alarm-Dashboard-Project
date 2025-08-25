@@ -10,11 +10,9 @@ export class AlarmStoreService implements OnDestroy {
   private persistMax = 10000;
   private storage: Storage = localStorage;
 
-  // periyodik yeniden hesaplama (10 dk penceresi için)
   private recalcEveryMs = 5000; // 5 sn
   private clockSub?: Subscription;
 
-  // ID tekilleme için hafif set
   private seenIds: Set<string> = new Set();
 
   // --- live (10m) ---
@@ -27,6 +25,9 @@ export class AlarmStoreService implements OnDestroy {
   private bySeverity10mSub =
     new BehaviorSubject<{ CRITICAL: number; WARN: number; INFO: number }>({ CRITICAL: 0, WARN: 0, INFO: 0 });
   bySeverity10m$ = this.bySeverity10mSub.asObservable();
+
+  private bufferSub = new BehaviorSubject<AlarmEvent[]>([]);
+  buffer$ = this.bufferSub.asObservable();
 
   private byCategory10mSub = new BehaviorSubject<Array<{ name: string; value: number }>>([]);
   byCategory10m$ = this.byCategory10mSub.asObservable();
@@ -43,7 +44,6 @@ export class AlarmStoreService implements OnDestroy {
   private hourly12Sub = new BehaviorSubject<{ labels: string[]; counts: number[] }>({ labels: [], counts: [] });
   hourly12$ = this.hourly12Sub.asObservable();
 
-  /** Son 12 saat severity kırılımı (Traffic için) */
   private hourly12BySeveritySub = new BehaviorSubject<{
     labels: string[];
     critical: number[];
@@ -60,9 +60,27 @@ export class AlarmStoreService implements OnDestroy {
   private last60mSub = new BehaviorSubject<number>(0);
   last60m$ = this.last60mSub.asObservable();
 
-  /** Weekly Alarms (son 7 gün, günlere göre toplam) */
+  /** Weekly Alarms (son 7 gün) */
   private weekly7Sub = new BehaviorSubject<{ labels: string[]; totals: number[] }>({ labels: [], totals: [] });
   weekly7$ = this.weekly7Sub.asObservable();
+
+  /** Uptime (24h, %) – 1 ondalık */
+  private uptime24hSub = new BehaviorSubject<number>(0);
+  uptime24h$ = this.uptime24hSub.asObservable();
+
+  /** En yeni 10 kayıt (Recent Activity) */
+  private latestSub = new BehaviorSubject<AlarmEvent[]>([]);
+  latest$ = this.latestSub.asObservable();
+
+  /** NEW: Acknowledged & Resolved (24h) */
+  private ack24hSub = new BehaviorSubject<number>(0);
+  ack24h$ = this.ack24hSub.asObservable();
+  private resolved24hSub = new BehaviorSubject<number>(0);
+  resolved24h$ = this.resolved24hSub.asObservable();
+
+  // Heuristic pattern'lar
+  private ACK_RE = /\b(ack|acknowledge(?:d|s)?)\b/i;
+  private RES_RE = /\b(resolve(?:d)?|clear(?:ed)?|closed?|recover(?:y|ed)?)\b/i;
 
   private typeToCategory: Record<string, string> = {
     POWER_OUTAGE: 'Power',
@@ -79,13 +97,11 @@ export class AlarmStoreService implements OnDestroy {
       if (raw) {
         const arr = JSON.parse(raw) as AlarmEvent[];
         this.buffer = this.pruneBuffer(this.sortDesc(arr));
-        // seenIds'i geçmiş buffer'dan doldur
         for (const e of this.buffer) if (e.id) this.seenIds.add(e.id);
         this.recomputeDerived();
       }
     } catch {}
 
-    // >>> YENİ: Son 10 dk penceresini zaman geçtikçe otomatik güncelle
     this.clockSub = timer(this.recalcEveryMs, this.recalcEveryMs)
       .subscribe(() => this.recomputeDerived());
   }
@@ -105,7 +121,7 @@ export class AlarmStoreService implements OnDestroy {
       return { ...e, arrivedAt: arrived } as AlarmEvent;
     });
 
-    // ID'ye göre tekille (yeni gelenlerden daha önce görülenleri at)
+    // ID'ye göre tekille
     const incoming = normalized.filter(e => {
       if (!e.id) return true;
       if (this.seenIds.has(e.id)) return false;
@@ -113,19 +129,16 @@ export class AlarmStoreService implements OnDestroy {
       return true;
     });
 
-    // Yeni (unique) + mevcut buffer -> sırala, kırp, türevleri hesapla
     this.buffer = this.pruneBuffer(this.sortDesc([...incoming, ...this.buffer]));
     this.recomputeDerived();
     this.persist();
   }
 
   push(event: AlarmEvent) {
-    // duplicate koruması
     if (event.id) {
       if (this.seenIds.has(event.id)) return;
       this.seenIds.add(event.id);
     }
-
     if (!event.arrivedAt) event.arrivedAt = new Date().toISOString();
 
     this.buffer.unshift(event);
@@ -136,7 +149,6 @@ export class AlarmStoreService implements OnDestroy {
 
   // ---------- yardımcılar ----------
 
-  /** BÜTÜN hesaplamalarda bu zamanı kullan */
   private getArrivedMs(e: AlarmEvent): number {
     return new Date(e.arrivedAt ?? e.createdAt ?? e.timestamp).getTime();
   }
@@ -156,9 +168,11 @@ export class AlarmStoreService implements OnDestroy {
     // --- pencereler (arrival time) ---
     const win10m = 10 * 60 * 1000;
     const win1h  = 60 * 60 * 1000;
+    const win24h = 24 * 60 * 60 * 1000;
 
     const recent10m = this.buffer.filter(e => now - this.getArrivedMs(e) <= win10m);
     const last1h    = this.buffer.filter(e => now - this.getArrivedMs(e) <= win1h);
+    const last24h   = this.buffer.filter(e => now - this.getArrivedMs(e) <= win24h);
 
     // live 10m
     this.recent10mSub.next(recent10m);
@@ -172,17 +186,91 @@ export class AlarmStoreService implements OnDestroy {
     this.byCategory10mSub.next(this.countCategory(recent10m));
     this.byCategory1hSub.next(this.countCategory(last1h));
 
-    // hourly 12h (arrival) + bySeverity
+    // hourly 12h + bySeverity
     const { labels, counts } = this.buildHourly12(this.buffer, now);
     this.hourly12Sub.next({ labels, counts });
     this.hourly12BySeveritySub.next(this.buildHourly12BySeverity(this.buffer, now));
 
-    // calendar (ayın günleri) — arrival
+    // calendar / KPI / weekly
     this.calendarMonthSub.next(this.buildCalendarMonth(this.buffer));
-
-    // KPI & Weekly Alarms — arrival
     this.last60mSub.next(last1h.length);
     this.weekly7Sub.next(this.buildLast7Days(this.buffer, now));
+
+    // latest (en yeni 10)
+    this.latestSub.next(this.buffer.slice(0, 10));
+
+    // Uptime 24h
+    this.uptime24hSub.next(this.computeUptime24h(this.buffer, now));
+
+    // Alarm filter
+    this.bufferSub.next(this.buffer);
+
+    // Ack / Resolved (24h)
+    const { ack, resolved } = this.computeAckResolved24h(last24h, now - win24h);
+    this.ack24hSub.next(ack);
+    this.resolved24hSub.next(resolved);
+  }
+
+  /* Uptime(24h): CRITICAL görülen **dakikalar** = down */
+  private computeUptime24h(all: AlarmEvent[], nowMs: number): number {
+    const minuteMs = 60 * 1000;
+    const nowMin = Math.floor(nowMs / minuteMs);
+    const startMin = nowMin - (24 * 60 - 1); // 24h penceresi
+
+    const downMinutes = new Set<number>();
+    for (const e of all) {
+      if (e.level !== 'CRITICAL') continue;
+      const m = Math.floor(this.getArrivedMs(e) / minuteMs);
+      if (m >= startMin && m <= nowMin) downMinutes.add(m);
+    }
+
+    const downPct = (downMinutes.size / (24 * 60)) * 100;
+    const pct = 100 - downPct;
+    return this.round1(pct);
+  }
+
+  /** 24h içinde ACK/RESOLVED sayıları */
+  private computeAckResolved24h(list24h: AlarmEvent[], startMs: number) {
+    const ackKeys = new Set<string>();
+    const resKeys = new Set<string>();
+
+    for (const e of list24h) {
+      const t = this.getArrivedMs(e);
+      if (isNaN(t) || t < startMs) continue;
+
+      const blob = `${(e.type ?? '')} ${(e as any).status ?? ''} ${(e.message ?? '')}`.toLowerCase();
+
+      if (this.isAck(blob, e))      ackKeys.add(this.eventKey(e));
+      if (this.isResolved(blob, e)) resKeys.add(this.eventKey(e));
+    }
+    return { ack: ackKeys.size, resolved: resKeys.size };
+  }
+
+  private isAck(blob: string, e: AlarmEvent): boolean {
+    const type = (e.type ?? '').toUpperCase();
+    const status = ((e as any).status ?? '').toUpperCase();
+    return status === 'ACK' || type.includes('ACK') || this.ACK_RE.test(blob);
+  }
+
+  private isResolved(blob: string, e: AlarmEvent): boolean {
+    const type = (e.type ?? '').toUpperCase();
+    const status = ((e as any).status ?? '').toUpperCase();
+    return status === 'RESOLVED' || type.includes('RESOLVED') || type.includes('CLEAR') || this.RES_RE.test(blob);
+  }
+
+  private eventKey(e: AlarmEvent): string {
+    return e.id ??
+      [
+        e.system ?? '',
+        e.point ?? e.device ?? '',
+        e.location ?? '',
+        (e.message ?? '').replace(/\s+/g, ' ').slice(0, 40)
+      ].join('|');
+  }
+
+  private round1(x: number): number {
+    const v = Math.max(0, Math.min(100, x));
+    return Math.round(v * 10) / 10;
   }
 
   private countSeverity(list: AlarmEvent[]) {
@@ -212,7 +300,6 @@ export class AlarmStoreService implements OnDestroy {
   }
 
   // --- zaman serileri ARRIVAL ile ---
-
   private buildHourly12(list: AlarmEvent[], nowMs: number) {
     const hours = 12;
     const labels: string[] = [];
