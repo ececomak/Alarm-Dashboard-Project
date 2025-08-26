@@ -403,4 +403,11 @@ export class AlarmStoreService implements OnDestroy {
   private sortDesc(list: AlarmEvent[]) {
     return [...list].sort((a, b) => this.getArrivedMs(b) - this.getArrivedMs(a));
   }
+
+  clearLocal() {
+  this.buffer = [];
+  this.seenIds.clear();
+  try { this.storage.removeItem(this.persistKey); } catch {}
+  this.recomputeDerived();
+  }
 }

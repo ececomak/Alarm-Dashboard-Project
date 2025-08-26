@@ -7,19 +7,44 @@
   </nb-card-header>
 
   <nb-card-body>
+    <!-- Row 1: editing tools -->
     <div class="toolbar">
-      <button nbButton size="small" status="basic" (click)="note = note + (note ? '\n' : '') + '• '">Bullet</button>
-      <button nbButton size="small" status="basic" (click)="note = note.trim()">Trim</button>
+      <div class="group">
+        <button nbButton size="small" status="basic" (click)="bullet()">Bullet <span class="muted">&nbsp;<kbd>⌘/Ctrl</kbd>+<kbd>B</kbd></span></button>
+        <button nbButton size="small" status="basic" (click)="checklist()">Checklist</button>
+        <button nbButton size="small" status="basic" (click)="insertTimestamp()">Timestamp <span class="muted">&nbsp;<kbd>⌘/Ctrl</kbd>+<kbd>T</kbd></span></button>
+        <button nbButton size="small" status="basic" (click)="clean()">Clean</button>
+        <button nbButton size="small" status="basic" (click)="addRcaTemplate()">RCA Template</button>
+        <button nbButton size="small" status="basic" (click)="addMaintTemplate()">Maintenance Template</button>
+      </div>
+
       <div class="spacer"></div>
-      <button nbButton size="small" status="success" (click)="save()">Save</button>
-      <button nbButton size="small" status="danger" (click)="clear()">Clear</button>
+
+      <div class="group">
+        <button nbButton size="small" status="info" (click)="triggerImport()">Import</button>
+        <input #fileInp type="file" accept=".txt,.md,.log" style="display:none" (change)="onImport($event)" />
+        <button nbButton size="small" status="info" (click)="export()">Export</button>
+        <button nbButton size="small" status="success" (click)="save()">Save <span class="muted">&nbsp;<kbd>⌘/Ctrl</kbd>+<kbd>S</kbd></span></button>
+        <button nbButton size="small" status="danger" (click)="clear()">Clear</button>
+      </div>
     </div>
 
-    <textarea nbInput rows="12" placeholder="Write maintenance notes…"
-              [(ngModel)]="note"></textarea>
+    <!-- Row 2: context tools -->
+    <div class="toolbar" style="margin-top:.25rem">
+      <div class="group">
+        <button nbButton size="small" status="primary" (click)="attachActiveTicket()">Attach Active Ticket</button>
+        <button nbButton size="small" status="primary" (click)="insertRecent10m()">Insert Recent (10m) Alarms</button>
+        <button nbButton size="small" status="primary" (click)="insertLast60mFromBuffer()">Insert Last 60m Alarms</button>
+      </div>
+    </div>
+
+    <textarea #ta nbInput rows="16" placeholder="Write maintenance notes…"
+              [(ngModel)]="note" (ngModelChange)="onNoteChange($event)"></textarea>
 
     <div class="meta">
-      <span>Characters: {{ note.length }}</span>
+      <span>Characters: {{ charCount }}</span>
+      <span>Words: {{ wordCount }}</span>
+      <span>Lines: {{ lineCount }}</span>
       <span *ngIf="savedAt">Last saved: {{ savedAt }}</span>
     </div>
   </nb-card-body>

@@ -8,13 +8,36 @@
 
   <nb-card-body>
     <div class="grid">
+      <!-- Dialog & live controls -->
       <nb-card>
         <nb-card-header>Dialog</nb-card-header>
         <nb-card-body>
-          <button nbButton status="primary" (click)="openConfirm()">Open Confirm Dialog</button>
+          <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+            <button nbButton status="primary" (click)="openConfirm()">Open Confirm Dialog</button>
+            <button nbButton status="danger" (click)="clearLocal()"
+                    nbTooltip="Clears 35d local buffer & scheduled mutes">
+              Clear Local Buffer (35d)
+            </button>
+          </div>
+
+          <h5 style="margin:.75rem 0 .5rem">Live Alerts Controls</h5>
+          <div style="display:flex; gap:.75rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem;">
+            <button nbButton status="primary" (click)="openPreviewCriticals()">Preview Criticals</button>
+            <button nbButton status="basic" (click)="snooze30m()">Snooze 30m</button>
+            <button nbButton status="basic" (click)="clearSnooze()">Clear Snooze</button>
+          </div>
+
+          <div style="margin-top:.25rem">
+            <div style="font-weight:600; margin-bottom:.25rem">Mute patterns (lowercase, substring match on system/device/point/location/message)</div>
+            <div style="display:flex; gap:.5rem; align-items:center;">
+              <input nbInput placeholder="e.g. tunnel-1 or fan" #muteInp style="flex:1" />
+              <button nbButton status="basic" (click)="addMutePattern(muteInp)">Add</button>
+            </div>
+          </div>
         </nb-card-body>
       </nb-card>
 
+      <!-- Toastr demo -->
       <nb-card>
         <nb-card-header>Toastr</nb-card-header>
         <nb-card-body class="toastr-actions">
@@ -27,6 +50,7 @@
   </nb-card-body>
 </nb-card>
 
+<!-- confirm dialog -->
 <ng-template #confirmTpl let-ref="dialogRef">
   <nb-card>
     <nb-card-header>Confirm Action</nb-card-header>
@@ -35,5 +59,29 @@
       <button nbButton status="basic" type="button" (click)="ref.close(false)">Cancel</button>
       <button nbButton status="primary" type="button" (click)="ref.close(true)">Confirm</button>
     </nb-card-footer>
+  </nb-card>
+</ng-template>
+
+<!-- preview criticals -->
+<ng-template #previewTpl>
+  <nb-card>
+    <nb-card-header>Recent Criticals (muting preview)</nb-card-header>
+    <nb-card-body>
+      <table class="table" *ngIf="recentCriticals$ | async as crits">
+        <thead><tr><th>Time</th><th>Device</th><th>Message</th><th>Mute</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let e of crits">
+            <td>{{ (e.arrivedAt || e.createdAt || e.timestamp) | date:'shortTime' }}</td>
+            <td>{{ e.device || e.point || e.system || '—' }}</td>
+            <td>{{ e.message }}</td>
+            <td>
+              <span *ngIf="labelFor(e) as lb" class="chip">{{ lb }}</span>
+              <span *ngIf="!labelFor(e)" class="muted">—</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <small class="muted">Muted by ticket = active maintenance window created in the wizard.</small>
+    </nb-card-body>
   </nb-card>
 </ng-template>

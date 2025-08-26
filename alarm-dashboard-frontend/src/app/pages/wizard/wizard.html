@@ -9,6 +9,7 @@
   <nb-card-body>
     <nb-stepper orientation="horizontal">
 
+      <!-- STEP 1 -->
       <nb-step label="Device">
         <form [formGroup]="deviceForm" class="form">
           <div class="field">
@@ -30,6 +31,7 @@
         </form>
       </nb-step>
 
+      <!-- STEP 2 -->
       <nb-step label="Details">
         <form [formGroup]="detailForm" class="form">
           <div class="field">
@@ -39,6 +41,7 @@
               Title is required (max 60 chars).
             </small>
           </div>
+
           <div class="field">
             <label>Description</label>
             <textarea nbInput rows="5" placeholder="Describe the maintenance task…" formControlName="description"></textarea>
@@ -46,6 +49,19 @@
               Description is required (max 500 chars).
             </small>
           </div>
+
+          <!-- Maintenance window -->
+          <div class="field">
+            <label>Duration</label>
+            <nb-select formControlName="durationMin">
+              <nb-option [value]="30">30 minutes</nb-option>
+              <nb-option [value]="60">1 hour</nb-option>
+              <nb-option [value]="120">2 hours</nb-option>
+              <nb-option [value]="240">4 hours</nb-option>
+            </nb-select>
+            <small class="muted">Starts now; will auto-end after the selected duration.</small>
+          </div>
+
           <div class="actions">
             <button nbButton nbStepperPrevious status="basic">Back</button>
             <button nbButton status="primary" nbStepperNext [disabled]="detailForm.invalid">Next</button>
@@ -53,6 +69,7 @@
         </form>
       </nb-step>
 
+      <!-- STEP 3 -->
       <nb-step label="Confirm">
         <form [formGroup]="confirmForm" class="form">
           <div class="field">
@@ -63,12 +80,15 @@
               <nb-option value="NOC">NOC</nb-option>
             </nb-select>
           </div>
+
           <div class="summary">
             <div><b>Device:</b> {{ deviceForm.value.device }} ({{ deviceForm.value.severity }})</div>
             <div><b>Title:</b> {{ detailForm.value.title }}</div>
             <div><b>Description:</b> {{ detailForm.value.description }}</div>
+            <div><b>Window:</b> Starts now, duration {{ detailForm.value.durationMin }} min</div>
             <div><b>Assignee:</b> {{ confirmForm.value.assignee }}</div>
           </div>
+
           <div class="actions">
             <button nbButton nbStepperPrevious status="basic">Back</button>
             <button nbButton status="success" (click)="finish()">Create Ticket</button>
@@ -82,7 +102,19 @@
 <nb-card *ngIf="submitted">
   <nb-card-header>Result</nb-card-header>
   <nb-card-body>
-    <pre *ngIf="result">{{ result | json }}</pre>
-    <span *ngIf="!result" class="err">Form is incomplete. Please check steps.</span>
+    <ng-container *ngIf="result; else incomplete">
+      <div class="summary">
+        <div><b>Ticket:</b> {{ result.id }} — <b>Status:</b> {{ result.status }}</div>
+        <div><b>Device:</b> {{ result.device }} ({{ result.severity }})</div>
+        <div><b>Window:</b> {{ result.startAt | date:'short' }} → {{ result.endAt | date:'short' }}</div>
+        <div><b>Assignee:</b> {{ result.assignee }}</div>
+      </div>
+      <div class="actions">
+        <button nbButton status="success" (click)="markDone()" [disabled]="!result || result.status !== 'Active'">Mark as Done</button>
+        <button nbButton status="danger"  (click)="cancelTicket()" [disabled]="!result || result.status !== 'Active'">Cancel Ticket</button>
+      </div>
+      <pre style="margin-top:.75rem">{{ result | json }}</pre>
+    </ng-container>
+    <ng-template #incomplete><span class="err">Form is incomplete. Please check steps.</span></ng-template>
   </nb-card-body>
 </nb-card>
