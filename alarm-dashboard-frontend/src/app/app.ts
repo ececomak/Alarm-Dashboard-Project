@@ -80,11 +80,11 @@ export class App {
     ];
 
     const showcase: any[] = [
-      { title: 'E-commerce', icon: 'shopping-cart-outline', expanded: false,
-        children: [{ title: 'Dashboard', link: '/ecommerce' }] },
+      { title: 'Operations Info Board', icon: 'clipboard-outline', expanded: false,
+        children: [{ title: 'Info Board', link: '/ecommerce' }] },
 
-      { title: 'IoT Dashboard', icon: 'home-outline', expanded: false,
-        children: [{ title: 'Dashboard', link: '/iot' }] },
+      { title: 'Knowledge Hub', icon: 'book-open-outline', expanded: false,
+        children: [{ title: 'Overview', link: '/iot' }] },
 
       { title: 'FEATURES', group: true },
 

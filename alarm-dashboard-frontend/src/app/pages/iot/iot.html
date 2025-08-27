@@ -1,35 +1,97 @@
 <h2 class="page-title">
-  <nb-icon icon="home-outline"></nb-icon>
-  IoT Dashboard
+  <nb-icon icon="book-open-outline"></nb-icon>
+  Tunnel Knowledge Hub
 </h2>
 
-<div class="grid kpis">
-  <nb-card class="kpi">
-    <nb-card-header>System Uptime</nb-card-header>
-    <nb-card-body><div #gaugeEl class="echart gauge"></div></nb-card-body>
-  </nb-card>
+<div class="grid">
+  <!-- Sol kolon: fun facts + SOP + SSS -->
+  <div class="card-stack">
+    <nb-card>
+      <nb-card-header>Fun Facts</nb-card-header>
+      <nb-card-body>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:.75rem;">
+          <div style="font-weight:600;">{{ funFacts[factIdx] }}</div>
+          <button nbButton size="small" status="basic" (click)="nextFact()">Sonraki</button>
+        </div>
+      </nb-card-body>
+    </nb-card>
 
-  <nb-card class="kpi">
-    <nb-card-header>Sensor Trend</nb-card-header>
-    <nb-card-body><div #trendEl class="echart"></div></nb-card-body>
-  </nb-card>
+    <nb-card>
+      <nb-card-header>Operasyon Kontrol Listeleri</nb-card-header>
+      <nb-card-body>
+        <nb-accordion multi>
+          <nb-accordion-item *ngFor="let c of checklists">
+            <nb-accordion-item-header>{{ c.title }}</nb-accordion-item-header>
+            <nb-accordion-item-body>
+              <ol style="margin:0; padding-left:1.1rem;">
+                <li *ngFor="let s of c.steps">{{ s }}</li>
+              </ol>
+            </nb-accordion-item-body>
+          </nb-accordion-item>
+        </nb-accordion>
+      </nb-card-body>
+    </nb-card>
+
+    <nb-card>
+      <nb-card-header>Sık Sorulan Sorular (SSS)</nb-card-header>
+      <nb-card-body>
+        <nb-accordion>
+          <nb-accordion-item *ngFor="let f of faqs">
+            <nb-accordion-item-header>{{ f.q }}</nb-accordion-item-header>
+            <nb-accordion-item-body>{{ f.a }}</nb-accordion-item-body>
+          </nb-accordion-item>
+        </nb-accordion>
+      </nb-card-body>
+    </nb-card>
+  </div>
+
+  <!-- Sağ kolon: Sözlük + Kısa rehber + Linkler -->
+  <div class="card-stack">
+    <nb-card>
+      <nb-card-header>Terimler Sözlüğü</nb-card-header>
+      <nb-card-body>
+        <div class="gloss-actions" style="margin-bottom:.5rem;">
+          <input nbInput placeholder="Ara: ack, fan, bakım…" [(ngModel)]="query" style="flex:1;">
+          <button nbButton size="small" status="basic" (click)="query = ''">Temizle</button>
+        </div>
+
+        <div class="glossary">
+          <div class="gloss-item" *ngFor="let g of filteredGlossary">
+            <div class="term">{{ g.term }}</div>
+            <div class="def">{{ g.def }}</div>
+            <div *ngIf="g.tags?.length" class="gloss-actions">
+              <span *ngFor="let t of g.tags" class="badge tag">{{ t }}</span>
+              <span style="flex:1"></span>
+              <button nbButton size="tiny" status="basic" (click)="copy(g.term, g.def)">Kopyala</button>
+            </div>
+          </div>
+        </div>
+      </nb-card-body>
+    </nb-card>
+
+    <nb-card>
+      <nb-card-header>Kısa Rehber</nb-card-header>
+      <nb-card-body>
+        <table class="table">
+          <thead><tr><th>Konu</th><th>Kısa açıklama</th></tr></thead>
+          <tbody>
+            <tr><td>ACK</td><td>Gör ve sahiplen; çözüm değildir.</td></tr>
+            <tr><td>Resolved</td><td>Kök neden giderildi, alarm kapandı.</td></tr>
+            <tr><td>Bilet kaynaklı sessize alma</td><td>Aktif bakım penceresi boyunca bastırılır.</td></tr>
+            <tr><td>10 dk Canlı</td><td>Son 10 dakikalık akış; hızlı görünüm.</td></tr>
+            <tr><td>35 gün Arşiv</td><td>Geriye dönük arama/rapor.</td></tr>
+          </tbody>
+        </table>
+      </nb-card-body>
+    </nb-card>
+
+    <nb-card>
+      <nb-card-header>Faydalı Linkler</nb-card-header>
+      <nb-card-body>
+        <div class="kv"><b>Alarm Filtresi</b><span>Forms → Alarm Filter</span></div>
+        <div class="kv"><b>Overlays</b><span>Dialoglar, sessize alma ve toastr kontrolü</span></div>
+        <div class="kv"><b>Bakım Sihirbazı</b><span>Bilet + planlı sessize alma</span></div>
+      </nb-card-body>
+    </nb-card>
+  </div>
 </div>
-
-<nb-card>
-  <nb-card-header>Devices</nb-card-header>
-  <nb-card-body>
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Name</th><th>Status</th><th>Temp (°C)</th><th>Humidity (%)</th></tr></thead>
-        <tbody>
-          <tr *ngFor="let d of devices">
-            <td>{{ d.name }}</td>
-            <td><span class="badge" [ngClass]="statusClass(d.status)">{{ d.status }}</span></td>
-            <td>{{ d.temp }}</td>
-            <td>{{ d.humidity }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </nb-card-body>
-</nb-card>

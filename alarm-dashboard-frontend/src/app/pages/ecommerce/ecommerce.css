@@ -1,17 +1,40 @@
 .page-title { display:flex; align-items:center; gap:.5rem; margin-bottom:.5rem; }
+
+/* ticker */
+.ticker { overflow:hidden; }
+.tape {
+  white-space: nowrap;
+  display: inline-flex;
+  gap: .75rem;
+  align-items: center;
+  animation: scroll-left 28s linear infinite;
+  min-width: 120%;
+  font-weight: 600;
+}
+.tape .sep { opacity:.25; padding: 0 .5rem; }
+.tape .dot {
+  width:8px; height:8px; border-radius:999px; background:#22c55e; display:inline-block; margin-right:.25rem;
+}
+@keyframes scroll-left {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.active-mute { margin: .5rem 0 1rem; }
+
+/* facts */
 .grid { display:grid; gap:1rem; }
-.kpis { grid-template-columns: repeat(4, minmax(0,1fr)); }
-.charts-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+.facts { grid-template-columns: repeat(4, minmax(0,1fr)); }
+.fact { display:grid; gap:.25rem; }
+.fact-title { opacity:.65; font-size:.9rem; }
+.fact-value { font-size:1.4rem; font-weight:700; }
 
-.kpi .kpi-row { display:flex; align-items:center; gap:.75rem; }
-.kpi nb-icon { width:22px; height:22px; font-size:22px; }
-.kpi .kpi-title { opacity:.75; font-size:.85rem; }
-.kpi .kpi-value { font-size:1.6rem; font-weight:700; line-height:1.1; }
+/* mini bars */
+.mini-bars { display:grid; gap:.45rem; }
+.bar { display:grid; grid-template-columns: 48px 1fr auto; gap:.5rem; align-items:center; }
+.bar-label { opacity:.6; font-size:.85rem; }
+.bar-track { background:rgba(0,0,0,.06); height:8px; border-radius:999px; overflow:hidden; }
+.bar-fill { height:100%; background:#3366ff; }
 
-.echart { width:100%; height:300px; }
-.table-wrap { overflow:auto; }
-.table { width:100%; border-collapse: collapse; }
-.table th, .table td { padding:.5rem; border-bottom: 1px solid var(--border-basic-color-3); }
-
-@media (max-width: 1200px){ .kpis{ grid-template-columns: repeat(2,1fr);} }
-@media (max-width: 768px){ .charts-2{ grid-template-columns: 1fr; } }
+/* responsive */
+@media (max-width: 1200px){ .facts { grid-template-columns: repeat(2,1fr);} }
+@media (max-width: 768px){ .facts { grid-template-columns: 1fr; } }

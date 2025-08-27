@@ -2,19 +2,7 @@
   <nb-card>
     <nb-card-header>Alerts</nb-card-header>
     <nb-card-body class="stack">
-      <div class="row actions">
-        <button nbButton size="small" status="basic" (click)="clearAll()">Clear all</button>
-        <button nbButton size="small" status="primary" (click)="restoreDemo()">Restore demo</button>
-      </div>
-
-      <ng-container *ngFor="let a of alerts">
-        <nb-alert *ngIf="a.visible" [status]="a.status">
-          <div class="alert-row">
-            <span>{{ a.text }}</span>
-            <button nbButton size="tiny" status="basic" outline (click)="dismiss(a)">Close</button>
-          </div>
-        </nb-alert>
-      </ng-container>
+      <nb-alert *ngFor="let a of (alerts$ | async)" [status]="a.status">{{ a.text }}</nb-alert>
     </nb-card-body>
   </nb-card>
 
@@ -22,12 +10,13 @@
     <nb-card-header>Badges & Tips</nb-card-header>
     <nb-card-body class="stack">
       <div class="badges">
-        <span class="badge critical" nbTooltip="Requires immediate action" (click)="badge('Critical')">Critical</span>
-        <span class="badge warning"  nbTooltip="Needs attention"          (click)="badge('Warning')">Warning</span>
-        <span class="badge info"     nbTooltip="Informational"            (click)="badge('Info')">Info</span>
-        <span class="badge ok"       nbTooltip="All good"                 (click)="badge('OK')">OK</span>
+        <span *ngFor="let b of (badges$ | async)"
+              class="badge {{b.cls}}"
+              [nbTooltip]="b.tip">
+          {{ b.name }} <span class="count" *ngIf="b.val!==null">{{ b.val }}</span>
+        </span>
       </div>
-      <small>Hover badges to see tooltips. Click to copy the label and show a toast.</small>
+      <small>Hover badges to see tooltips.</small>
     </nb-card-body>
   </nb-card>
 
@@ -36,14 +25,18 @@
     <nb-card-body>
       <div class="row">
         <span>Processing</span>
-        <nb-progress-bar [value]="percent" [status]="percent<70 ? 'primary' : (percent<100 ? 'warning' : 'success')"></nb-progress-bar>
-        <span>{{ percent }}%</span>
+        <nb-progress-bar
+          [value]="(maintProgress$ | async) ?? percent"
+          [status]="((maintProgress$ | async) ?? percent) < 70 ? 'primary' : (((maintProgress$ | async) ?? percent) < 100 ? 'warning' : 'success')">
+        </nb-progress-bar>
+        <span>{{ (maintProgress$ | async) ?? percent }}%</span>
       </div>
-      <div class="row">
-        <button nbButton status="primary" (click)="simulate()" [disabled]="loading">Simulate</button>
-        <button nbButton status="warning" (click)="cancel()" [disabled]="!loading">Cancel</button>
-        <button nbButton status="basic" (click)="reset()" [disabled]="loading">Reset</button>
-      </div>
+
+      <button nbButton status="primary"
+              (click)="simulate()"
+              [disabled]="loading || (maintProgress$ | async) !== null">
+        {{ (maintProgress$ | async) !== null ? 'Maintenance in progress' : (loading ? 'Running…' : 'Simulate') }}
+      </button>
     </nb-card-body>
   </nb-card>
 
@@ -51,11 +44,11 @@
     <nb-card-header>Toggles</nb-card-header>
     <nb-card-body class="toggles">
       <label class="line">
-        <nb-toggle [checked]="liveUpdates" (checkedChange)="onToggleLive($event)"></nb-toggle>
+        <nb-toggle [checked]="live" (checkedChange)="toggleLive($event)"></nb-toggle>
         <span>Live updates</span>
       </label>
       <label class="line">
-        <nb-toggle [checked]="notifications" (checkedChange)="onToggleNoti($event)"></nb-toggle>
+        <nb-toggle [checked]="notify" (checkedChange)="toggleNotify($event)"></nb-toggle>
         <span>Notifications</span>
       </label>
     </nb-card-body>

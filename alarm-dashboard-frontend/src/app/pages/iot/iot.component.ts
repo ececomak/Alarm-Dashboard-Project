@@ -1,7 +1,8 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
-import * as echarts from 'echarts';
+import { Component, OnDestroy } from '@angular/core';
 
-type Device = { name: string; status: 'Online'|'Offline'|'Degraded'; temp: number; humidity: number; };
+type GlossaryItem = { term: string; def: string; tags?: string[] };
+type Checklist = { title: string; steps: string[] };
+type FAQ = { q: string; a: string };
 
 @Component({
   selector: 'app-iot',
@@ -9,65 +10,140 @@ type Device = { name: string; status: 'Online'|'Offline'|'Degraded'; temp: numbe
   templateUrl: './iot.html',
   styleUrls: ['./iot.css'],
 })
-export class IotComponent implements AfterViewInit, OnDestroy {
-  @ViewChild('gaugeEl', { static: true }) gaugeEl!: ElementRef<HTMLDivElement>;
-  @ViewChild('trendEl', { static: true }) trendEl!: ElementRef<HTMLDivElement>;
+export class IotComponent implements OnDestroy {
+  // ---- fun facts ----
+  funFacts: string[] = [
+    'Kritik alarmın %72’si ilk 10 dakika içinde kapatılır.',
+    'Fan arızalarının %60’ı planlı bakımdan sonraki 48 saat içinde görünür.',
+    'ACK verilen alarmların yaklaşık %85’i aynı vardiyada “Resolved” olur.',
+    'En sık görülen iki alarm: FAN_RPM_LOW ve SENSOR_FAULT.',
+    'Snooze pencereleri, yanlış pozitif tostları yaklaşık %40 azaltır.',
+  ];
+  factIdx = 0;
+  private factTick?: any;
 
-  private charts: echarts.ECharts[] = [];
-  private tick?: any;
+  // ---- glossary ----
+  query = '';
+  glossary: GlossaryItem[] = [
+    {
+      term: 'ACK (Onaylandı)',
+      def: 'Alarm görüldü ve bir operatör sorumluluğu aldı. Bu, sorunun çözüldüğü anlamına gelmez.',
+      tags: ['alarm', 'operasyon'],
+    },
+    {
+      term: 'Resolved / Clear',
+      def: 'Kök neden giderildi, alarm kapandı ve durum normale döndü.',
+      tags: ['alarm'],
+    },
+    {
+      term: 'Heartbeat',
+      def: 'Cihazın/servisin “canlı” olduğunu bildiren periyodik sinyal.',
+      tags: ['telemetri'],
+    },
+    {
+      term: 'Fan RPM Low',
+      def: 'Fan beklenenden düşük devirde. Isınma/performans riski taşır.',
+      tags: ['donanım', 'kritik'],
+    },
+    {
+      term: 'Sensor Fault',
+      def: 'Sensörden veri alınamıyor veya değerler tutarsız.',
+      tags: ['sensör'],
+    },
+    {
+      term: 'Bakım Penceresi',
+      def: 'Planlı bakım aralığı. Bu süre boyunca ilgili alarmlar sessize alınabilir.',
+      tags: ['bakım'],
+    },
+    {
+      term: 'SLA',
+      def: 'Hizmet seviyesi taahhüdü (ör. %99,9 erişilebilirlik).',
+      tags: ['sözleşme'],
+    },
+    {
+      term: 'Ağ Geçidi (Gateway)',
+      def: 'Sahadaki sensörler ile merkezi sistem arasındaki köprü.',
+      tags: ['altyapı'],
+    },
+    {
+      term: 'Tünel',
+      def: 'Bu projede izlenen ana varlık grubu; bir tünel birden çok cihaz içerir.',
+      tags: ['envanter'],
+    },
+  ];
+  get filteredGlossary(): GlossaryItem[] {
+    const q = this.query.trim().toLowerCase();
+    if (!q) return this.glossary;
+    return this.glossary.filter(g =>
+      g.term.toLowerCase().includes(q) ||
+      g.def.toLowerCase().includes(q) ||
+      (g.tags || []).some(t => t.toLowerCase().includes(q))
+    );
+  }
 
-  private trendData: number[] = Array.from({ length: 20 }, () => 20 + Math.round(Math.random() * 10));
-
-  devices: Device[] = [
-    { name: 'Tunnel-1',  status: 'Online',  temp: 31, humidity: 48 },
-    { name: 'Gateway-2', status: 'Degraded',temp: 43, humidity: 35 },
-    { name: 'Pump-4',    status: 'Online',  temp: 28, humidity: 54 },
-    { name: 'Sensor-7',  status: 'Offline', temp: 0,  humidity: 0  },
+  // ---- SOP ----
+  checklists: Checklist[] = [
+    {
+      title: 'Kritik alarm geldiğinde',
+      steps: [
+        'Alarmı ACK ile üzerine al.',
+        'İlgili cihazı/point’i doğrula; son 10 dakikalık akışı kontrol et.',
+        'Bakım penceresi aktif mi? Aktifse muting notlarını incele.',
+        'Kök nedeni sınıfla: güç / fan / ağ / sensör.',
+        'Gerekirse ekibe eskale et ve açıklama notu bırak.',
+      ],
+    },
+    {
+      title: 'Bakım öncesi',
+      steps: [
+        'Sihirbazdan bilet oluştur; süreyi belirle (örn. 60 dk).',
+        'Oluşan “scheduled mute” kaydını doğrula.',
+        'Etkilenecek kapsamı ve geri alma (rollback) planını yaz.',
+        'Bakım başlangıç notunu ekle.',
+      ],
+    },
+    {
+      title: 'Bakım sonrası',
+      steps: [
+        '“Muted by ticket” uyarısının kalktığını doğrula.',
+        'Açık alarm kaldıysa çöz ve “Resolved” notu ekle.',
+        'Bileti “Done” yap ve kısa özet bırak.',
+      ],
+    },
   ];
 
-  ngAfterViewInit(): void {
-    const gauge = echarts.init(this.gaugeEl.nativeElement);
-    gauge.setOption({
-      series: [{
-        type: 'gauge',
-        min: 0, max: 100,
-        detail: { formatter: '{value}%' },
-        data: [{ value: 86, name: 'Uptime' }],
-      }],
-    });
+  // ---- SSS ----
+  faqs: FAQ[] = [
+    {
+      q: '“Muted by ticket” ne demek?',
+      a: 'Sihirbazda açtığın etkin bakım penceresiyle eşleşen alarmlar, pencere bitene kadar yerelde bastırılır. Veri kaybı olmaz; sadece gürültü azaltılır.',
+    },
+    {
+      q: 'ACK ile Resolved arasındaki fark nedir?',
+      a: 'ACK görmek/üzerine almak demektir; Resolved ise kök neden giderilip alarmın kapanmasıdır.',
+    },
+    {
+      q: '10 dk canlı akış dışında nasıl arama yaparım?',
+      a: 'Forms → Alarm Filter sayfasında “Live” kapatılır, tarih aralığı seçilerek 35 günlük arşivde filtreleme yapılır.',
+    },
+  ];
 
-    const trend = echarts.init(this.trendEl.nativeElement);
-    const init = Array.from({ length: 20 }, () => 20 + Math.round(Math.random()*10));
-    trend.setOption({
-      tooltip: { trigger: 'axis' },
-      grid: { left: 28, right: 12, top: 24, bottom: 24 },
-      xAxis: { type: 'category', data: Array.from({length: 20}, (_,i)=>i) },
-      yAxis: { type: 'value', min: 0, max: 100 },
-      series: [{ type: 'line', smooth: true, symbol: 'none', data: init }],
-    });
-
-    this.charts.push(gauge, trend);
-    window.addEventListener('resize', this.resize);
-
-    // canlı simülasyon
-    this.tick = setInterval(() => {
-      const last = this.trendData[this.trendData.length - 1] ?? 50;
-      const next = Math.max(0, Math.min(100, last + (Math.random() * 10 - 5)));
-      this.trendData.push(Math.round(next));
-      if (this.trendData.length > 20) this.trendData.shift();
-      trend.setOption({ series: [{ data: this.trendData }] }, false);
-    }, 1200);
+  constructor() {
+    this.factTick = setInterval(() => {
+      this.factIdx = (this.factIdx + 1) % this.funFacts.length;
+    }, 6000);
   }
 
   ngOnDestroy(): void {
-    clearInterval(this.tick);
-    window.removeEventListener('resize', this.resize);
-    this.charts.forEach(c => c.dispose());
+    if (this.factTick) clearInterval(this.factTick);
   }
 
-  private resize = () => this.charts.forEach(c => c.resize());
+  nextFact() {
+    this.factIdx = (this.factIdx + 1) % this.funFacts.length;
+  }
 
-  statusClass(s: Device['status']) {
-    return s.toLowerCase();
+  copy(term: string, def: string) {
+    const txt = `${term}: ${def}`;
+    navigator.clipboard?.writeText(txt).catch(() => {});
   }
 }
