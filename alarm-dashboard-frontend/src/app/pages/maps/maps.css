@@ -7,21 +7,45 @@
   overflow: hidden;
 }
 
-.marker { position: relative; }
+.marker { position: relative; filter: drop-shadow(0 3px 8px rgba(0,0,0,.25)); }
 .marker .dot {
-  width: 14px; height: 14px; border-radius: 50%;
-  box-shadow: 0 0 0 3px rgba(0,0,0,.12);
+  width: 28px; height: 28px;
+  border-radius: 9999px;
+  border: 3px solid #fff;           
+  position: relative;
 }
-.marker-critical .dot { background:#ef3b2d; } 
-.marker-warning  .dot { background:#f7b928; }
-.marker-info     .dot { background:#3da5ff; }
-.marker-normal   .dot { background:#22c55e; }
+.marker .count {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font-size: 13px; font-weight: 800;
+  color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6);
+}
+
+.marker-critical .dot { background:#ef3b2d; box-shadow: 0 0 0 8px rgba(239,59,45,.22); }
+.marker-warning  .dot { background:#f7b928; box-shadow: 0 0 0 8px rgba(247,185,40,.25); }
+.marker-info     .dot { background:#3da5ff; box-shadow: 0 0 0 8px rgba(61,165,255,.22); }
+.marker-normal   .dot { background:#19c257; box-shadow: 0 0 0 6px rgba(156,163,175,.20); }
+
+.marker-warning .count { color:#1f2937; text-shadow: none; }
+
+.marker.pulse::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 18px; height: 18px; margin-left:-9px; margin-top:-9px;
+  border-radius: 9999px; border: 3px solid rgba(0,0,0,.18);
+  animation: ping 1s ease-out 6; 
+}
+@keyframes ping {
+  0%   { transform: scale(1);   opacity: .7; }
+  100% { transform: scale(3.4); opacity: 0;  }
+}
 
 .legend {
   display:flex; gap:.5rem; flex-wrap:wrap;
   margin-top:.75rem; font-size:.85rem;
 }
-.leg { padding:.15rem .5rem; border-radius:.5rem; background: var(--background-basic-color-3); }
+.leg { padding:.2rem .6rem; border-radius:.5rem; background: var(--background-basic-color-3); }
 .leg-critical { border:1px solid #ef3b2d55; }
 .leg-warning  { border:1px solid #f7b92855; }
 .leg-info     { border:1px solid #3da5ff55; }

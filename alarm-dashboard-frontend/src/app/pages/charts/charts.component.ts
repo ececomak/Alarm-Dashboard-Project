@@ -1,14 +1,14 @@
-import { Component, AfterViewInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import { Component, AfterViewInit, OnDestroy, ElementRef, ViewChild, ViewEncapsulation } from '@angular/core';
 import * as echarts from 'echarts';
-import { Subscription, combineLatest } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { AlarmStoreService } from '../../core/realtime/alarm-store.service';
-import { AlarmEvent } from '../../core/realtime/alarm-event';
 
 @Component({
   selector: 'app-charts',
   standalone: false,
   templateUrl: './charts.html',
   styleUrls: ['./charts.css'],
+  encapsulation: ViewEncapsulation.None,
 })
 export class ChartsComponent implements AfterViewInit, OnDestroy {
   @ViewChild('areaEl',     { static: true }) areaEl!: ElementRef<HTMLDivElement>;
@@ -22,7 +22,7 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
   constructor(private store: AlarmStoreService) {}
 
   ngAfterViewInit(): void {
-    // 1) Traffic (Stacked Area) — 12h by severity
+    // 1) Traffic (12h)
     const area = echarts.init(this.areaEl.nativeElement);
     area.setOption({
       tooltip: { trigger: 'axis' },
@@ -36,7 +36,6 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
         { name:'Info',     type:'line', stack:'total', areaStyle:{}, smooth:true, data: [] },
       ],
     });
-
     this.subs.push(
       this.store.hourly12BySeverity$.subscribe(({ labels, critical, warn, info }) => {
         area.setOption({
@@ -50,7 +49,7 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
       })
     );
 
-    // 2) Rose / Donut Pie — SON 1 SAAT kategori
+    // 2) Rose Pie (1h)
     const rose = echarts.init(this.roseEl.nativeElement);
     rose.setOption({
       tooltip: { trigger: 'item' },
@@ -63,13 +62,11 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
         data: [],
       }],
     });
-    this.subs.push(
-      this.store.byCategory1h$.subscribe(data => {
-        rose.setOption({ series: [{ data }] });
-      })
-    );
+    this.subs.push(this.store.byCategory1h$.subscribe(data => {
+      rose.setOption({ series: [{ data }] });
+    }));
 
-    // 3) Calendar Heatmap — bu ay
+    // 3) Calendar Heatmap (this month)
     const calendar = echarts.init(this.calendarEl.nativeElement);
     calendar.setOption({
       tooltip: { position: 'top' },
@@ -83,36 +80,55 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
       },
       series: [{ type: 'heatmap', coordinateSystem: 'calendar', data: [] }],
     });
-    this.subs.push(
-      this.store.calendarMonth$.subscribe(data => {
-        calendar.setOption({ series: [{ data }] });
-      })
-    );
+    this.subs.push(this.store.calendarMonth$.subscribe(data => {
+      calendar.setOption({ series: [{ data }] });
+    }));
 
-    // 4) Radar — son 10 dk: sev + kategori/konum çeşitliliği
+    // 4) Radar — (last 10m)
     const radar = echarts.init(this.radarEl.nativeElement);
     radar.setOption({
+      tooltip: {
+        formatter: (params: any) => {
+          const v = params.value as number[];
+          return [
+            '<b>Severity (10m)</b>',
+            `Critical: ${v[0]}`,
+            `Warnings: ${v[1]}`,
+            `Info: ${v[2]}`,
+          ].join('<br/>');
+        }
+      },
       radar: {
         indicator: [
-          { name:'Critical', max: 20 },
-          { name:'Warnings', max: 20 },
-          { name:'Info',     max: 20 },
-          { name:'Categories', max: 10 },
-          { name:'Locations',  max: 10 },
-        ]
+          { name:'Critical', max: 10 },
+          { name:'Warnings', max: 10 },
+          { name:'Info',     max: 10 },
+        ],
+        axisName: { color: '#334155' }
       },
-      series: [{ type:'radar', data: [{ value:[0,0,0,0,0], name:'Score' }] }],
+      series: [{
+        type: 'radar',
+        areaStyle: { opacity: 0.2 },
+        symbol: 'circle',
+        symbolSize: 4,
+        data: [{ value:[0,0,0], name:'Severity' }],
+      }],
     });
 
     this.subs.push(
-      combineLatest([
-        this.store.bySeverity10m$,
-        this.store.byCategory10m$,
-        this.store.recent$,
-      ]).subscribe(([sev, cats, recent]) => {
-        const locCount = new Set(recent.map((e: AlarmEvent) => e.location)).size;
-        const value = [sev.CRITICAL, sev.WARN, sev.INFO, cats.length, locCount];
-        radar.setOption({ series: [{ data: [{ value, name:'Score' }] }] });
+      this.store.bySeverity10m$.subscribe(sev => {
+        // Dinamik ölçek
+        const max = Math.max(10, sev.CRITICAL, sev.WARN, sev.INFO);
+        radar.setOption({
+          radar: {
+            indicator: [
+              { name:'Critical', max },
+              { name:'Warnings', max },
+              { name:'Info',     max },
+            ],
+          },
+          series: [{ data: [{ value:[sev.CRITICAL, sev.WARN, sev.INFO], name:'Severity' }] }],
+        });
       })
     );
 
