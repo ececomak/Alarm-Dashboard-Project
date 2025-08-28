@@ -40,6 +40,9 @@ svg {
 .leaflet-pane .marker .blip.warning  { background: #f7b928; color:#1f2937; }
 .leaflet-pane .marker .blip.info     { background: #3da5ff; }
 .leaflet-pane .marker .blip.normal   { background: #22c55e; }
+.leaflet-pane .marker .blip.mixed {
+  background: conic-gradient(#ef3b2d 0 33%, #f7b928 33% 66%, #3da5ff 66% 100%);
+  color: #fff; }
 
 @keyframes ping {
   0%   { transform: scale(.75); opacity: .7; }

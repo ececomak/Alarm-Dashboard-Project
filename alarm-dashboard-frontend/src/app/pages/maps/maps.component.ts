@@ -7,7 +7,7 @@ import { AlarmEvent } from '../../core/realtime/alarm-event';
 
 type Sev = 'CRITICAL' | 'WARN' | 'INFO';
 type BubbleClass = 'critical' | 'warning' | 'info' | 'normal' | 'mixed';
-
+type Counts = { critical: number; warn: number; info: number; total: number; lastTs?: number };
 type Tunnel = { key: string; label: string; lat: number; lng: number };
 
 @Component({
@@ -25,11 +25,10 @@ export class MapsComponent implements AfterViewInit, OnDestroy {
   private base?: L.TileLayer;
   private sub?: Subscription;
 
-  /** Yaklaşık koordinatlar (Hekimhan çevresi) */
   private tunnels: Tunnel[] = [
     { key: 'Sarsap',       label: 'Sarsap Tüneli',       lat: 38.8880, lng: 37.9000 },
-    { key: 'Karakisık 1',  label: 'Karakısık 1',         lat: 38.8220, lng: 37.9990 },
-    { key: 'Karakisık 2',  label: 'Karakısık 2',         lat: 38.8120, lng: 38.0070 },
+    { key: 'Karakısık 1',  label: 'Karakısık 1',         lat: 38.8220, lng: 37.9990 },
+    { key: 'Karakısık 2',  label: 'Karakısık 2',         lat: 38.8120, lng: 38.0070 },
     { key: 'Hasançelebi',  label: 'Hasançelebi',         lat: 38.8620, lng: 37.9190 },
     { key: 'T1',           label: 'T1 Tüneli',           lat: 38.8475, lng: 37.9540 },
     { key: 'T2',           label: 'T2 Tüneli',           lat: 38.8460, lng: 37.9690 },
@@ -39,6 +38,17 @@ export class MapsComponent implements AfterViewInit, OnDestroy {
 
   private markers = new Map<string, L.Marker>();
   private lastSeen = new Map<string, number>();
+
+  private norm(s: unknown): string {
+    let v = (s ?? '').toString().trim();
+    if (!v) return '';
+    v = v.toLocaleLowerCase('tr');                  
+    v = v.normalize('NFD').replace(/\u0307/g, '');  
+    v = v.replace(/ı/g, 'i');                        
+    v = v.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); 
+    v = v.replace(/\s+/g, ' ');                     
+    return v;
+  }
 
   ngAfterViewInit(): void {
     this.map = L.map(this.mapEl.nativeElement, { zoomControl: true, attributionControl: false })
@@ -58,7 +68,7 @@ export class MapsComponent implements AfterViewInit, OnDestroy {
       );
 
       m.addTo(this.map!);
-      this.markers.set(t.key.toLowerCase(), m);
+      this.markers.set(this.norm(t.key), m);   
       group.push(m);
     }
     const bounds = L.featureGroup(group as any).getBounds();
@@ -72,45 +82,39 @@ export class MapsComponent implements AfterViewInit, OnDestroy {
     this.map?.remove();
   }
 
-  // ---------- render ----------
-
   private render(recent: AlarmEvent[]) {
     const now = Date.now();
-    const counts = new Map<
-      string,
-      { critical: number; warn: number; info: number; total: number; lastTs: number }
-    >();
+    const counts = new Map<string, Counts>();
 
     for (const e of recent) {
-      const locKey = (e.location ?? '').toString().trim().toLowerCase();
+      const locKey = this.norm(e.location);   
       if (!locKey) continue;
       const ts = this.getMs(e);
 
-      const bucket =
-        counts.get(locKey) ?? { critical: 0, warn: 0, info: 0, total: 0, lastTs: 0 };
-
+      const bucket = counts.get(locKey) ?? { critical: 0, warn: 0, info: 0, total: 0, lastTs: 0 };
       const lvl = (e.level ?? '').toString().toUpperCase() as Sev;
+
       if (lvl === 'CRITICAL') bucket.critical++;
       else if (lvl === 'WARN') bucket.warn++;
       else bucket.info++;
 
       bucket.total++;
-      bucket.lastTs = Math.max(bucket.lastTs, ts);
+      bucket.lastTs = Math.max(bucket.lastTs ?? 0, ts);
       counts.set(locKey, bucket);
     }
 
     for (const t of this.tunnels) {
-      const key = t.key.toLowerCase();
+      const key = this.norm(t.key);           
       const m = this.markers.get(key)!;
 
-      const c = counts.get(key) ?? { critical: 0, warn: 0, info: 0, total: 0, lastTs: 0 };
+      const c: Counts = counts.get(key) ?? { critical: 0, warn: 0, info: 0, total: 0, lastTs: 0 };
       const bubbleClass = this.pickClass(c.critical, c.warn, c.info);
 
       const prev = this.lastSeen.get(key) ?? 0;
-      const isFresh = c.lastTs > prev && now - c.lastTs < 60_000; 
-      if (c.lastTs > 0) this.lastSeen.set(key, c.lastTs);
+      const isFresh = (c.lastTs ?? 0) > prev && now - (c.lastTs ?? 0) < 60_000;
+      if ((c.lastTs ?? 0) > 0) this.lastSeen.set(key, c.lastTs!);
 
-      m.setIcon(this.icon(bubbleClass, isFresh, c.total));
+      m.setIcon(this.icon(bubbleClass, isFresh, c.total, c));
       m.setTooltipContent(this.tooltipHtml(t.label, c));
       m.setZIndexOffset(c.total > 0 ? 1500 : 0);
     }
@@ -125,10 +129,7 @@ export class MapsComponent implements AfterViewInit, OnDestroy {
     return 'normal';
   }
 
-  private tooltipHtml(
-    title: string,
-    c: { critical: number; warn: number; info: number; total: number },
-  ) {
+  private tooltipHtml(title: string, c: { critical: number; warn: number; info: number; total: number }) {
     return `
       <div><b>${title}</b></div>
       <div style="font-size:12px;opacity:.8">Last 10 min</div>
@@ -141,31 +142,45 @@ export class MapsComponent implements AfterViewInit, OnDestroy {
     `;
   }
 
-  private icon(cls: BubbleClass, pulse: boolean, total: number): L.DivIcon {
+  private icon(cls: BubbleClass, pulse: boolean, total: number, c?: Counts): L.DivIcon {
     const count = Number.isFinite(total) ? total : 0;
+    const style = cls === 'mixed' && c ? this.mixStyle(c) : '';
     return L.divIcon({
-      className: 'marker', 
-      html: `<div class="blip ${cls}${pulse ? ' pulse' : ''}"><span>${count}</span></div>`,
+      className: 'marker',
+      html: `<div class="blip ${cls}${pulse ? ' pulse' : ''}" style="${style}"><span>${count}</span></div>`,
       iconSize: [32, 32],
       iconAnchor: [16, 16],
     });
+  }
+
+  private mixStyle(c: Counts): string {
+    const total = Math.max(1, c.critical + c.warn + c.info);
+    const slices: Array<[number, string]> = [];
+    if (c.critical > 0) slices.push([c.critical / total, '#ef3b2d']);
+    if (c.warn     > 0) slices.push([c.warn     / total, '#f7b928']);
+    if (c.info     > 0) slices.push([c.info     / total, '#3da5ff']);
+
+    let acc = 0;
+    const stops: string[] = [];
+    for (const [ratio, color] of slices) {
+      const from = acc * 100;
+      acc += ratio;
+      const to = acc * 100;
+      stops.push(`${color} ${from.toFixed(1)}% ${to.toFixed(1)}%`);
+    }
+    return `background: conic-gradient(${stops.join(', ')});`;
   }
 
   private getMs(e: AlarmEvent): number {
     return new Date(e.arrivedAt ?? e.createdAt ?? e.timestamp ?? Date.now()).getTime();
   }
 
-  // ---------- base layer / theme ----------
-
-  private currentTheme(): string {
-    return localStorage.getItem('theme') || 'default';
-  }
+  private currentTheme(): string { return localStorage.getItem('theme') || 'default'; }
 
   private applyBaseLayer(themeName: string) {
     const light = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-    const dark = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    const dark  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
     const url = themeName === 'dark' ? dark : light;
-
     if (this.base) this.base.removeFrom(this.map!);
     this.base = L.tileLayer(url, { maxZoom: 19 });
     this.base.addTo(this.map!);

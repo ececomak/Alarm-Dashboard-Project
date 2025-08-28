@@ -17,7 +17,7 @@ export class IotComponent implements OnDestroy {
     'Fan arızalarının %60’ı planlı bakımdan sonraki 48 saat içinde görünür.',
     'ACK verilen alarmların yaklaşık %85’i aynı vardiyada “Resolved” olur.',
     'En sık görülen iki alarm: FAN_RPM_LOW ve SENSOR_FAULT.',
-    'Snooze pencereleri, yanlış pozitif tostları yaklaşık %40 azaltır.',
+    'Snooze pencereleri, yanlış pozitif toastrları yaklaşık %40 azaltır.',
   ];
   factIdx = 0;
   private factTick?: any;

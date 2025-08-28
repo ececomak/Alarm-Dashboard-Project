@@ -105,7 +105,7 @@ export class App {
         children: [{ title: 'Maintenance Wizard', link: '/wizard' }] },
 
       { title: 'Maps', icon: 'map-outline',
-        children: [{ title: 'Devices Map', link: '/maps' }] },
+        children: [{ title: 'Alarms Map', link: '/maps' }] },
 
       { title: 'Charts', icon: 'pie-chart-outline',
         children: [{ title: 'Analytics', link: '/charts' }] },
