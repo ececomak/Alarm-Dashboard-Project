@@ -29,7 +29,7 @@ export class MapsComponent implements AfterViewInit, OnDestroy {
     { key: 'Sarsap',       label: 'Sarsap Tüneli',       lat: 38.8880, lng: 37.9000 },
     { key: 'Karakısık 1',  label: 'Karakısık 1',         lat: 38.8220, lng: 37.9990 },
     { key: 'Karakısık 2',  label: 'Karakısık 2',         lat: 38.8120, lng: 38.0070 },
-    { key: 'Hasançelebi',  label: 'Hasançelebi',         lat: 38.8620, lng: 37.9190 },
+    { key: 'Hasan Çelebi',  label: 'Hasan Çelebi',       lat: 38.8620, lng: 37.9190 },
     { key: 'T1',           label: 'T1 Tüneli',           lat: 38.8475, lng: 37.9540 },
     { key: 'T2',           label: 'T2 Tüneli',           lat: 38.8460, lng: 37.9690 },
     { key: 'T3',           label: 'T3 Tüneli',           lat: 38.8440, lng: 37.9830 },
